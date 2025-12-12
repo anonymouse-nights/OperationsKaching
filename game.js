@@ -30,7 +30,7 @@ var s = null;
 var tickHandle = null;
 var notice = { text: "", type: "" };
 
-// ===== Crash display (so you see what broke) =====
+/* ===== Crash display (so you see what broke) ===== */
 window.onerror = function (msg, url, line, col) {
   try {
     var ss = document.getElementById("saveStatus");
@@ -39,7 +39,7 @@ window.onerror = function (msg, url, line, col) {
   return false;
 };
 
-// ===== Helpers =====
+/* ===== Helpers ===== */
 function $(id){ return document.getElementById(id); }
 
 function setHTML(id, html){
@@ -55,16 +55,16 @@ function setText(id, text){
 }
 
 function show(id){
-  var el = document.getElementById(id);
+  var el = $(id);
   if(!el){
     console.warn("Missing element id:", id);
-    return; // prevents blank-screen crash
+    return;
   }
   el.className = el.className.replace("hidden", "").trim();
 }
 
 function hide(id){
-  var el = document.getElementById(id);
+  var el = $(id);
   if(!el){
     console.warn("Missing element id:", id);
     return;
@@ -88,6 +88,15 @@ function setNotice(text, type){
   notice.type = type || "";
 }
 
+function hideAllActionButtons(){
+  hide("serveBtn");
+  hide("goodDeedBtn");
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+}
+
+/* ===== State ===== */
 function newState(roleKey){
   return {
     roleKey: roleKey,
@@ -95,6 +104,9 @@ function newState(roleKey){
     reputation: 60,
     stage: 0,
     debt: 0,
+
+    // IMPORTANT: this is NOT inside unlocked (we check s.gazetteSupported)
+    gazetteSupported: false,
 
     incomeBonus: 0,
     repGainBonus: 0,
@@ -108,7 +120,7 @@ function newState(roleKey){
     unlocked: {
       stall: false,
       storefront: false,
-      newspaper: false,
+      newspaper: false, // this means "Gazette offer exists"
       bank: false
     },
 
@@ -135,15 +147,7 @@ function incomePerSecond(){
   return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
 }
 
-function hideAllActionButtons(){
-  hide("serveBtn");
-  hide("goodDeedBtn");
-  hide("advertiseBtn");
-  hide("loanBtn");
-  hide("repayBtn");
-}
-
-// ===== ASCII rendering =====
+/* ===== ASCII rendering ===== */
 function renderAscii(){
   var artBlock = $("ascii_display");
   var caption = $("ascii_caption");
@@ -156,7 +160,6 @@ function renderAscii(){
     artBlock.textContent = art;
     show("ascii_display");
   } else {
-    // Don’t crash—just show nothing if missing
     artBlock.textContent = "";
     hide("ascii_display");
   }
@@ -175,21 +178,24 @@ function renderTownFeatures(){
   hide("ascii_gazette");
 
   var town = (typeof TOWN_ASCII !== "undefined") ? TOWN_ASCII : null;
+  if(!town) return;
 
-  if(s.unlocked.newspaper && town && town.gazette && $("ascii_gazette")){
+  // Gazette art appears once the Gazette is unlocked (offer exists)
+  if(s.unlocked.newspaper && town.gazette && $("ascii_gazette")){
     $("ascii_gazette").textContent = town.gazette;
     show("ascii_gazette");
     show("town_features");
   }
 
-  if(s.unlocked.bank && town && town.bank && $("ascii_bank")){
+  // Bank art appears once bank unlocked
+  if(s.unlocked.bank && town.bank && $("ascii_bank")){
     $("ascii_bank").textContent = town.bank;
     show("ascii_bank");
     show("town_features");
   }
 }
 
-// ===== Loop =====
+/* ===== Loop ===== */
 function startLoop(){
   stopLoop();
   tickHandle = setInterval(tick, 1000);
@@ -204,13 +210,17 @@ function tick(){
   if(!s) return;
 
   s.seconds += 1;
+
+  // passive earnings
   s.money += incomePerSecond();
 
+  // demand drifts with rep
   if(s.seconds % 10 === 0){
     var drift = (s.reputation - 50) / 5000;
     s.demand = clamp(s.demand + drift, 0.85, 1.20);
   }
 
+  // bank interest
   if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
     var interest = Math.max(1, Math.floor(s.debt * 0.02));
     s.debt += interest;
@@ -227,13 +237,18 @@ function tick(){
   render();
 }
 
-// ===== Unlocks =====
+/* ===== Unlock Logic (controls button visibility) ===== */
 function checkUnlocks(){
-  // ALWAYS available after game start
+  // always available after start
   show("serveBtn");
   show("goodDeedBtn");
 
-  // --- Stall upgrade becomes available ---
+  // Keep late-game buttons hidden unless unlocked
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+
+  // Stall upgrade becomes available
   if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
     s.unlocked.stall = true;
     show("upgrade_block");
@@ -242,7 +257,7 @@ function checkUnlocks(){
     setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
   }
 
-  // --- Storefront upgrade becomes available ---
+  // Storefront upgrade becomes available
   if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
     s.unlocked.storefront = true;
     show("upgrade_block");
@@ -251,7 +266,7 @@ function checkUnlocks(){
     setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
   }
 
-  // --- Gazette unlock (button appears, but ads still not active until bought) ---
+  // Gazette offer appears (NOT ads yet)
   if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
     s.unlocked.newspaper = true;
     show("upgrade_block");
@@ -260,30 +275,29 @@ function checkUnlocks(){
     setNotice("NEW OPTION: Support the Town Gazette", "yellow");
   }
 
-  // --- Bank unlock ---
+  // Show / hide the Gazette upgrade button
+  // If you already supported it, hide the support button.
+  if(s.unlocked.newspaper && !s.gazetteSupported){
+    show("unlockNewsBtn");
+  } else {
+    hide("unlockNewsBtn");
+  }
+
+  // Advertise ONLY after you paid for Gazette support
+  if(s.gazetteSupported){
+    show("advertiseBtn");
+  } else {
+    hide("advertiseBtn");
+  }
+
+  // Bank unlock
   if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
     s.unlocked.bank = true;
     log("The bank clerk offers you a loan. (Be careful.)");
     setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
   }
 
-  // --- Show Advertise ONLY after Gazette is supported (your buyUpgrade('newspaper') does that) ---
-  if(s.unlocked.newspaper){
-    // Only show the "Support Gazette" button until purchased
-    show("unlockNewsBtn");
-  } else {
-    hide("unlockNewsBtn");
-  }
-
-  // The actual advertise button should only show AFTER you pay for newspaper support.
-  // We can use a separate flag for that:
-  if(s.unlocked.newspaper && s.gazetteSupported){
-    show("advertiseBtn");
-  } else {
-    hide("advertiseBtn");
-  }
-
-  // --- Loan/Repay ONLY after bank unlocked ---
+  // Loan/Repay ONLY after bank unlocked
   if(s.unlocked.bank){
     show("loanBtn");
     show("repayBtn");
@@ -292,11 +306,10 @@ function checkUnlocks(){
     hide("repayBtn");
   }
 
-  // Log should be visible once the game starts
   show("log");
 }
 
-// ===== Actions =====
+/* ===== Actions ===== */
 function serveCustomer(){
   var role = ROLES[s.roleKey];
 
@@ -311,7 +324,7 @@ function serveCustomer(){
     var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
     s.money += payout;
 
-    var repGain = Math.floor((role.serveRep + s.repGainBonus) * 1.0);
+    var repGain = Math.floor((role.serveRep + s.repGainBonus));
     s.reputation = clamp(s.reputation + repGain, 0, 100);
 
     log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
@@ -352,6 +365,12 @@ function doGoodDeed(){
 }
 
 function advertise(){
+  if(!s.gazetteSupported){
+    log("You need the Gazette's support before you can advertise.");
+    setNotice("Support the Gazette first.", "red");
+    return;
+  }
+
   var cost = 30 + (s.stage*10);
   if(s.money < cost){
     log("Advertising costs money. You don't have enough.");
@@ -455,10 +474,26 @@ function buyUpgrade(which){
 
   if(which === "newspaper"){
     var cost4 = 200;
-    if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); return; }
+
+    // must have the Gazette offer first
+    if(!s.unlocked.newspaper){
+      log("You haven't met the Gazette yet.");
+      return;
+    }
+
+    // already supported
+    if(s.gazetteSupported){
+      log("The Gazette already supports you.");
+      return;
+    }
+
+    if(s.money < cost4){
+      log("You need " + money(cost4) + " to support the Gazette.");
+      return;
+    }
 
     s.money -= cost4;
-    s.unlocked.newspaper = true;
+    s.gazetteSupported = true; // ✅ this enables Advertise
     s.reputation = clamp(s.reputation + 6, 0, 100);
 
     log("The Gazette features your business. Advertising unlocked.");
@@ -468,7 +503,7 @@ function buyUpgrade(which){
   }
 }
 
-// ===== Render =====
+/* ===== Render ===== */
 function render(){
   if(!s) return;
 
@@ -500,32 +535,39 @@ function render(){
   show("stage_line");
   show("income_line");
   show("story_line");
-  show("serveBtn");
-  show("goodDeedBtn");
   show("log");
 
-  if(s.unlocked.stall) show("upgrade_block");
+  // Upgrades visibility
+  if(s.unlocked.stall || s.unlocked.storefront || s.unlocked.newspaper || s.stage >= 1) show("upgrade_block");
+
   if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn"); else hide("upgradeToStallBtn");
   if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn"); else hide("upgradeToStoreBtn");
-  if(s.stage >= 1) show("hireHelpBtn"); else hide("hireHelpBtn");
-  if(s.unlocked.newspaper) show("unlockNewsBtn"); else hide("unlockNewsBtn");
 
-  if(s.unlocked.newspaper) show("advertiseBtn"); else hide("advertiseBtn");
+  if(s.stage >= 1) show("hireHelpBtn"); else hide("hireHelpBtn");
+
+  // Support Gazette button only until purchased
+  if(s.unlocked.newspaper && !s.gazetteSupported) show("unlockNewsBtn");
+  else hide("unlockNewsBtn");
+
+  // Action buttons controlled by checkUnlocks(), but render still safely mirrors state:
+  if(s.gazetteSupported) show("advertiseBtn"); else hide("advertiseBtn");
   if(s.unlocked.bank){ show("loanBtn"); show("repayBtn"); } else { hide("loanBtn"); hide("repayBtn"); }
+  show("serveBtn");
+  show("goodDeedBtn");
 
   renderAscii();
   renderTownFeatures();
   renderLog();
 }
 
-// ===== Start / Save / Load =====
+/* ===== Start / Save / Load ===== */
 function startGame(){
   var roleKey = $("roleSelect").value;
   s = newState(roleKey);
 
   hide("setup_block");
 
-  // Hide everything first (prevents buttons appearing too early)
+  // Hide everything first
   hideAllActionButtons();
   hide("upgrade_block");
   hide("upgradeToStallBtn");
@@ -533,7 +575,7 @@ function startGame(){
   hide("hireHelpBtn");
   hide("unlockNewsBtn");
 
-  // Only these two should appear immediately
+  // Only these two show immediately
   show("serveBtn");
   show("goodDeedBtn");
 
@@ -567,6 +609,8 @@ function loadGame(){
     hide("setup_block");
     setNotice("Loaded save.", "yellow");
 
+    // When loading, make sure buttons refresh correctly
+    hideAllActionButtons();
     render();
     log("Loaded save.");
     startLoop();
