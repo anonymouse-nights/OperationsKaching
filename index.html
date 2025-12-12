@@ -7,22 +7,84 @@
   <head>
     <title>Town Trade !</title>
     <meta http-equiv="Cache-control" content="no-cache" />
-    <style type="text/css">
-      body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; margin: 12px; color: #111; }
-      .home_button { margin: 2px 0; padding: 2px 6px; font-size: 13px; }
-      .clear { clear: both; }
-      #tabBar { display:none; }
-      a { color: #0a58ca; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      .muted { color: #666; }
-      .tiny { font-size: 12px; color:#666; }
-      pre { margin: 0; }
-      .panelRight { float:right; width: 420px; }
-      .panelLeft { overflow: hidden; }
-      .hidden { display:none; }
-      .clickable { cursor:pointer; }
-      .clickable:hover { text-decoration: underline; }
-    </style>
+ <style type="text/css">
+body {
+    background-color: #FFFFFF;
+    overflow-y:scroll;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    color:#282e32;
+}
+
+#tabs {
+    text-align: center;
+    margin: auto;
+    padding: 0px;
+    margin-top: 5px;
+    margin-bottom:6px;
+}
+#tabs li { list-style: none; display: inline; }
+
+#tabs li button {
+    color:#282e32;
+    padding:8px 14px 8px 14px;
+    text-decoration:none;
+    font-size:9px;
+    font-family:Verdana, Arial, Helvetica, sans-serif;
+    font-weight:bold;
+    text-transform:uppercase;
+    border:1px solid #464c54;
+}
+#tabs li button.active {
+    background-color:#f8f2b1;
+    color:#282e32;
+    border:1px solid #464c54;
+}
+
+#tab_town_trade {
+    display:block;
+    border: 2px solid transparent;
+}
+
+/* Candybox behavior helpers */
+.clear { clear:both; }
+button {
+    border:1px solid #464c54;
+    margin-bottom:2px;
+    padding:2px;
+    background-color: #ffffff;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 12px;
+}
+button:hover { border:2px solid #464c54; padding:1px; }
+
+/* Keep the "ASCII" feel */
+pre {
+    font-family: monospace;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Layout like Candy Box: right panel float */
+.panelRight { float:right; width: 420px; }
+.panelLeft { overflow: hidden; }
+
+/* Simple show/hide like Candy Box */
+.hidden { display:none; }
+
+/* Minor text helpers */
+.muted { color:#666; }
+.tiny { font-size: 12px; color:#666; }
+
+#restartButton { margin-left: 30px; }
+
+/* Dark mode hooks (optional later) */
+.dark_mode { background-color: #111; color: #F1F1F1; }
+.dark_button { background-color: #171717; color: #9D9D9D !important; }
+.dark_button:disabled { background-color: #404040; }
+.dark_link { color: orange; }
+.dark_link:visited { color: chocolate; }
+.dark_table { border-color: #F1F1F1; }
+</style>
   </head>
 
   <body>
