@@ -35,8 +35,6 @@ var SAVE_KEY = "townTrade_save_core_v1";
 
 /* =========================
    DEFAULT ROLE LIST (UI only)
-   - These are the roles your UI will offer.
-   - Role modules can override name/desc via TT_ROLES config.
    ========================= */
 var ROLE_CATALOG = [
   { key: "general_store", label: "General Store / Trading Post" },
@@ -139,6 +137,11 @@ function getRoleModule(roleKey){
   return (window.TT_ROLES && window.TT_ROLES[roleKey]) ? window.TT_ROLES[roleKey] : null;
 }
 
+function getActiveRoleModule(){
+  if(!s) return null;
+  return getRoleModule(s.roleKey);
+}
+
 function roleName(roleKey){
   var mod = getRoleModule(roleKey);
   if(mod && mod.meta && mod.meta.name) return mod.meta.name;
@@ -156,8 +159,48 @@ function roleIntro(roleKey){
 }
 
 /* =========================
+   GLOBAL TIME SYSTEM (shared)
+   - Roles should advance meaningful time by calling:
+       TT_API.passHours(n)
+   - The engine still runs a 1s tick for UI + interest/etc.
+   ========================= */
+var HOURS_PER_DAY = 12;
+
+function initTime(st){
+  if(typeof st.seconds !== "number") st.seconds = 0;
+
+  if(typeof st.hours !== "number") st.hours = 0;       // total hours passed
+  if(typeof st.dayCount !== "number") st.dayCount = 0; // day number based on hours
+  if(typeof st.hourOfDay !== "number") st.hourOfDay = 0; // 0..HOURS_PER_DAY-1
+}
+
+function passHours(st, api, hours){
+  hours = Math.max(1, Math.floor(hours || 1));
+
+  for(var i=0; i<hours; i++){
+    st.hours += 1;
+
+    var prevDay = st.dayCount;
+    st.dayCount = Math.floor(st.hours / HOURS_PER_DAY);
+    st.hourOfDay = st.hours % HOURS_PER_DAY;
+
+    // role hourly hook
+    var mod = getActiveRoleModule();
+    if(mod && typeof mod.onHour === "function"){
+      try { mod.onHour(st, api); } catch(e){ console.error(e); }
+    }
+
+    // role daily hook (only when day changes)
+    if(st.dayCount !== prevDay){
+      if(mod && typeof mod.onNewDay === "function"){
+        try { mod.onNewDay(st, api); } catch(e2){ console.error(e2); }
+      }
+    }
+  }
+}
+
+/* =========================
    STATE FACTORY
-   - Role modules can add their own data in mod.init(state)
    ========================= */
 function newState(roleKey){
   var base = {
@@ -171,8 +214,11 @@ function newState(roleKey){
     debt: 0,
     demand: 1.0,
 
+    // time (engine-managed)
     seconds: 0,
-    dayCount: 0, // roles can use this or ignore it
+    hours: 0,
+    dayCount: 0,
+    hourOfDay: 0,
 
     unlocked: {},
 
@@ -183,18 +229,21 @@ function newState(roleKey){
     logLines: []
   };
 
+  initTime(base);
+
   var mod = getRoleModule(roleKey);
   if(mod && typeof mod.init === "function"){
     try { mod.init(base); } catch(e){ console.error(e); }
   }
+
+  // If role init removed/changed time, normalize again:
+  initTime(base);
 
   return base;
 }
 
 /* =========================
    BUTTON DISPATCH
-   - Index.html calls these by id onclick=""
-   - They forward to the active role module if implemented
    ========================= */
 function onAction(actionName){
   if(!s) return;
@@ -207,7 +256,6 @@ function onAction(actionName){
     return;
   }
 
-  // no-op if role doesn't implement it yet
   log("Nothing happens. (This role doesn’t implement: " + actionName + ")");
   setNotice("That action isn't available for this role yet.", "red");
   render();
@@ -222,7 +270,8 @@ function buyUpgrade(which){ onAction("upgrade_" + which); }
 
 /* =========================
    CORE LOOP
-   - Calls role.tick() if present
+   - Still ticks every second for UI + background systems
+   - TIME (days/hours) is primarily advanced via passHours()
    ========================= */
 function startLoop(){
   stopLoop();
@@ -237,6 +286,7 @@ function stopLoop(){
 function tick(){
   if(!s) return;
 
+  // keep seconds for any effects that still want "real-time"
   s.seconds += 1;
 
   var mod = getRoleModule(s.roleKey);
@@ -252,14 +302,12 @@ function tick(){
 
 /* =========================
    ASCII RENDER (optional)
-   - Role modules can fill TT_ASCII, or handle their own UI.
    ========================= */
 function renderAscii(){
   var art = $("ascii_display");
   var cap = $("ascii_caption");
   if(!art || !cap || !s) return;
 
-  // role modules can provide a function for ascii
   var mod = getRoleModule(s.roleKey);
   if(mod && typeof mod.getAscii === "function"){
     var out = mod.getAscii(s, TT_API) || { art:"", caption:"" };
@@ -269,7 +317,6 @@ function renderAscii(){
     return;
   }
 
-  // fallback: empty
   art.textContent = "";
   cap.textContent = "";
   hide("ascii_display");
@@ -277,7 +324,6 @@ function renderAscii(){
 
 /* =========================
    RENDER CORE UI
-   - Role modules can provide extra lines via mod.renderExtra()
    ========================= */
 function render(){
   if(!s) return;
@@ -286,7 +332,14 @@ function render(){
   setHTML("role_line", "<b>Role:</b> " + roleName(s.roleKey));
   setHTML("money_line", "<b>Money:</b> " + money(s.money) + " <span class='muted'>(Debt: " + money(s.debt) + ")</span>");
   setHTML("rep_line", "<b>Reputation:</b> " + s.reputation);
-  setHTML("stage_line", "<b>Business:</b> Stage " + (s.stage + 1));
+
+  // show time here so you SEE the day cycle
+  setHTML(
+    "stage_line",
+    "<b>Business:</b> Stage " + (s.stage + 1) +
+    " <span class='muted'>(Day " + (s.dayCount + 1) + ", Hour " + (s.hourOfDay + 1) + " / " + HOURS_PER_DAY + ")</span>"
+  );
+
   setHTML("income_line", "<b>Status:</b> Demand x" + (s.demand || 1).toFixed(2));
 
   // story line + notices
@@ -306,7 +359,6 @@ function render(){
   }
   setHTML("story_line", noticeHtml + baseStory);
 
-  // visibility: after start, always show core lines
   show("role_line");
   show("money_line");
   show("rep_line");
@@ -315,10 +367,8 @@ function render(){
   show("story_line");
   show("log");
 
-  // let role decide which buttons are visible
   applyButtonPolicy();
 
-  // optional: role extra render
   if(mod && typeof mod.renderExtra === "function"){
     mod.renderExtra(s, TT_API);
   }
@@ -329,10 +379,8 @@ function render(){
 
 /* =========================
    BUTTON VISIBILITY POLICY
-   - Roles tell the engine what to show
    ========================= */
 function applyButtonPolicy(){
-  // default: hide everything
   hide("serveBtn");
   hide("goodDeedBtn");
   hide("advertiseBtn");
@@ -347,9 +395,6 @@ function applyButtonPolicy(){
   var mod = getRoleModule(s.roleKey);
   if(mod && typeof mod.buttons === "function"){
     var b = mod.buttons(s, TT_API) || {};
-    // expected shape:
-    // { serve:true, discount:true, advertise:false, loan:false, repay:false,
-    //   upgrades: { stall:false, storefront:false, helper:false, newspaper:false } }
 
     if(b.serve) show("serveBtn");
     if(b.discount) show("goodDeedBtn");
@@ -366,13 +411,10 @@ function applyButtonPolicy(){
     }
     return;
   }
-
-  // if role isn't implemented yet, allow nothing
 }
 
 /* =========================
    ROLE-FACING API (stable)
-   - Role modules use this; you won't change this later
    ========================= */
 var TT_API = {
   // UI + helpers
@@ -386,7 +428,13 @@ var TT_API = {
 
   // staged unlock bag
   unlock: function(key){ s.unlocked[key] = true; },
-  isUnlocked: function(key){ return !!s.unlocked[key]; }
+  isUnlocked: function(key){ return !!s.unlocked[key]; },
+
+  // NEW: global time control (roles call this)
+  passHours: function(n){
+    if(!s) return;
+    passHours(s, TT_API, n);
+  }
 };
 
 /* =========================
@@ -395,8 +443,6 @@ var TT_API = {
 function populateRoleDropdown(){
   var sel = $("roleSelect");
   if(!sel) return;
-
-  // if the html already has options, we won't overwrite (safe)
   if(sel.options && sel.options.length > 0) return;
 
   for(var i=0;i<ROLE_CATALOG.length;i++){
@@ -418,7 +464,6 @@ function startGame(){
   if(mod && typeof mod.start === "function"){
     mod.start(s, TT_API);
   } else {
-    // reasonable defaults if role isn't implemented yet
     s.money = 100;
     s.reputation = 0;
     setNotice("This role isn’t implemented yet. Try General Store once it exists.", "red");
@@ -454,6 +499,9 @@ function loadGame(){
     s = JSON.parse(raw);
     hide("setup_block");
 
+    // normalize time fields for old saves
+    initTime(s);
+
     // let role repair/upgrade old saves
     var mod = getRoleModule(s.roleKey);
     if(mod && typeof mod.onLoad === "function"){
@@ -482,11 +530,9 @@ function restartGame(){
 (function init(){
   populateRoleDropdown();
 
-  // show save presence
   var raw = localStorage.getItem(SAVE_KEY);
   if(raw) setText("saveStatus", "Save found on this device.");
 
-  // keep things clean before start
   hide("role_line");
   hide("money_line");
   hide("rep_line");
