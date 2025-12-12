@@ -1,10 +1,25 @@
 /* =========================================================
-   Town Trade - game.js (clean + reliable UI hiding)
-   - Uses el.hidden so "hidden" always works even if CSS fails
-   - Requires: ascii.js loads BEFORE this file
+   Town Trade - game.js
+   Reliable UI hiding (uses el.hidden) + clear button costs
+   Requires: ascii.js loads BEFORE this file
    ========================================================= */
 
-var SAVE_KEY = "townTrade_cb_style_v3";
+var SAVE_KEY = "townTrade_cb_style_v4";
+
+/* =========================
+   BALANCE CONSTANTS (easy to tweak later)
+   ========================= */
+var DISCOUNT_COST = 5;            // Offer discount costs $5
+var DISCOUNT_REP_GAIN = 2;        // ...and gives +2 reputation
+
+var LOAN_CASH_AMOUNT = 200;       // Player receives $200
+var LOAN_DEBT_AMOUNT = 220;       // Debt increases by $220 (built-in fee)
+var REPAY_PER_CLICK = 10;         // Repay debt in $10 chunks
+
+var UPGRADE_COST_STALL = 120;
+var UPGRADE_COST_STOREFRONT = 480;
+var UPGRADE_COST_HELPER = 260;
+var UPGRADE_COST_GAZETTE = 200;
 
 /* -----------------------------
    Roles
@@ -70,10 +85,7 @@ function setText(id, text){
   el.textContent = text;
 }
 
-/* IMPORTANT:
-   Use HTML hidden property so hiding always works,
-   even if CSS is cached/broken/overridden.
-*/
+/* IMPORTANT: use hidden property so hiding always works */
 function show(id){
   var el = $(id);
   if(!el){
@@ -121,25 +133,21 @@ function newState(roleKey){
     stage: 0,
     debt: 0,
 
-    // Gazette support = unlocks Advertise button
     gazetteSupported: false,
 
-    // modifiers
     incomeBonus: 0,
     repGainBonus: 0,
     demand: 1.0,
 
-    // stats
     seconds: 0,
     served: 0,
     goodServed: 0,
     badServed: 0,
 
-    // unlock flags
     unlocked: {
       stall: false,
       storefront: false,
-      newspaperOffer: false, // "Support Gazette" becomes available
+      newspaperOffer: false,
       bank: false
     },
 
@@ -184,7 +192,6 @@ function hideAllActionButtons(){
 }
 
 function resetUIBeforeStart(){
-  // hide gameplay info
   hide("role_line");
   hide("money_line");
   hide("rep_line");
@@ -193,7 +200,6 @@ function resetUIBeforeStart(){
   hide("story_line");
   hide("log");
 
-  // hide action buttons + upgrades
   hideAllActionButtons();
   hide("upgrade_block");
   hide("upgradeToStallBtn");
@@ -201,11 +207,35 @@ function resetUIBeforeStart(){
   hide("hireHelpBtn");
   hide("unlockNewsBtn");
 
-  // hide ASCII panels
   hide("ascii_display");
   hide("town_features");
   hide("ascii_gazette");
   hide("ascii_bank");
+}
+
+/* -----------------------------
+   Button labels (shows costs on buttons)
+-------------------------------- */
+function updateButtonLabels(){
+  // Action buttons
+  if($("serveBtn")) setText("serveBtn", "Serve a customer");
+  if($("goodDeedBtn")) setText("goodDeedBtn", "Offer discount to a customer (" + money(DISCOUNT_COST) + ", +" + DISCOUNT_REP_GAIN + " rep)");
+  if($("loanBtn")) setText("loanBtn", "Take a small bank loan (" + money(LOAN_CASH_AMOUNT) + ")");
+  if($("repayBtn")) setText("repayBtn", "Repay debt (" + money(REPAY_PER_CLICK) + " per click)");
+
+  // Advertise cost changes with stage, so show the CURRENT cost
+  if($("advertiseBtn") && s){
+    var adCost = 30 + (s.stage * 10);
+    setText("advertiseBtn", "Run a small advertisement (" + money(adCost) + ")");
+  } else if($("advertiseBtn")) {
+    setText("advertiseBtn", "Run a small advertisement");
+  }
+
+  // Upgrades (show cost directly)
+  if($("upgradeToStallBtn")) setText("upgradeToStallBtn", "Upgrade: Stage 1 → Stage 2 (" + money(UPGRADE_COST_STALL) + ")");
+  if($("upgradeToStoreBtn")) setText("upgradeToStoreBtn", "Upgrade: Stage 2 → Stage 3 (" + money(UPGRADE_COST_STOREFRONT) + ")");
+  if($("hireHelpBtn")) setText("hireHelpBtn", "Hire steady help (" + money(UPGRADE_COST_HELPER) + ")");
+  if($("unlockNewsBtn")) setText("unlockNewsBtn", "Support the Town Gazette (" + money(UPGRADE_COST_GAZETTE) + ")");
 }
 
 /* -----------------------------
@@ -245,14 +275,12 @@ function renderTownFeatures(){
   var town = (typeof TOWN_ASCII !== "undefined") ? TOWN_ASCII : null;
   if(!town) return;
 
-  // Gazette art appears when offer exists
   if(s.unlocked.newspaperOffer && town.gazette && $("ascii_gazette")){
     $("ascii_gazette").textContent = town.gazette;
     show("ascii_gazette");
     show("town_features");
   }
 
-  // Bank art appears when bank unlocked
   if(s.unlocked.bank && town.bank && $("ascii_bank")){
     $("ascii_bank").textContent = town.bank;
     show("ascii_bank");
@@ -278,16 +306,14 @@ function tick(){
 
   s.seconds += 1;
 
-  // passive income
   s.money += incomePerSecond();
 
-  // demand drifts with reputation
   if(s.seconds % 10 === 0){
     var drift = (s.reputation - 50) / 5000;
     s.demand = clamp(s.demand + drift, 0.85, 1.20);
   }
 
-  // bank interest
+  // interest stays the same for now
   if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
     var interest = Math.max(1, Math.floor(s.debt * 0.02));
     s.debt += interest;
@@ -307,18 +333,16 @@ function tick(){
    Unlock logic + button timing
 -------------------------------- */
 function checkUnlocks(){
-  // Always available after start:
   show("serveBtn");
   show("goodDeedBtn");
 
-  // Keep these hidden unless allowed:
   hide("advertiseBtn");
   hide("loanBtn");
   hide("repayBtn");
   hide("unlockNewsBtn");
 
   // Stall unlock
-  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+  if(!s.unlocked.stall && (s.money >= UPGRADE_COST_STALL || s.served >= 10)){
     s.unlocked.stall = true;
     show("upgrade_block");
     show("upgradeToStallBtn");
@@ -335,7 +359,7 @@ function checkUnlocks(){
     setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
   }
 
-  // Gazette offer unlock (support button appears)
+  // Gazette offer unlock
   if(!s.unlocked.newspaperOffer && (s.reputation >= 70 || s.goodServed >= 8)){
     s.unlocked.newspaperOffer = true;
     show("upgrade_block");
@@ -343,7 +367,7 @@ function checkUnlocks(){
     setNotice("NEW OPTION: Support the Town Gazette", "yellow");
   }
 
-  // Support Gazette button visible only until paid
+  // Support Gazette button visible until paid
   if(s.unlocked.newspaperOffer && !s.gazetteSupported){
     show("upgrade_block");
     show("unlockNewsBtn");
@@ -367,7 +391,7 @@ function checkUnlocks(){
     show("repayBtn");
   }
 
-  // Hire help button appears once you reach stage 2+ (or change rule later)
+  // Hire help appears at stage 2+
   if(s.stage >= 1){
     show("upgrade_block");
     show("hireHelpBtn");
@@ -416,22 +440,27 @@ function serveCustomer(){
   saveGame(true);
 }
 
-function doGoodDeed(){
-  var cost = 12 + (s.stage*4);
-  if(s.money < cost){
-    log("You want to help, but you don't have enough cash right now.");
-    setNotice("Not enough money for that right now.", "red");
+/* ✅ Renamed behavior: Offer discount */
+function offerDiscount(){
+  if(s.money < DISCOUNT_COST){
+    log("You want to offer a discount, but you don't have enough cash.");
+    setNotice("Not enough money for a discount.", "red");
     return;
   }
 
-  s.money -= cost;
-  var rep = 4 + Math.floor(s.stage/2);
-  s.reputation = clamp(s.reputation + rep, 0, 100);
+  s.money -= DISCOUNT_COST;
+  s.reputation = clamp(s.reputation + DISCOUNT_REP_GAIN, 0, 100);
 
-  log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
-  setNotice("Good deed completed: reputation increased.", "yellow");
+  log("You offered a discount. -" + money(DISCOUNT_COST) + ", +" + DISCOUNT_REP_GAIN + " reputation.");
+  setNotice("Discount offered: reputation increased.", "yellow");
+
   render();
   saveGame(true);
+}
+
+/* Backward compatibility: if index.html still calls doGoodDeed() */
+function doGoodDeed(){
+  offerDiscount();
 }
 
 function advertise(){
@@ -441,7 +470,7 @@ function advertise(){
     return;
   }
 
-  var cost = 30 + (s.stage*10);
+  var cost = 30 + (s.stage * 10);
   if(s.money < cost){
     log("Advertising costs money. You don't have enough.");
     setNotice("Not enough money to advertise.", "red");
@@ -463,12 +492,11 @@ function takeLoan(){
     return;
   }
 
-  var amount = 120;
-  s.money += amount;
-  s.debt += amount;
+  s.money += LOAN_CASH_AMOUNT;
+  s.debt += LOAN_DEBT_AMOUNT;
 
-  log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
-  setNotice("Loan taken: remember debt grows with interest.", "red");
+  log("You took a bank loan: +" + money(LOAN_CASH_AMOUNT) + ". Debt increased by " + money(LOAN_DEBT_AMOUNT) + ".");
+  setNotice("Loan taken: debt grows with interest.", "red");
   render();
   saveGame(true);
 }
@@ -480,7 +508,7 @@ function repayLoan(){
     return;
   }
 
-  var pay = Math.min(80, s.debt);
+  var pay = Math.min(REPAY_PER_CLICK, s.debt);
   if(s.money < pay){
     log("You don't have enough money to repay right now.");
     setNotice("Not enough money to repay debt.", "red");
@@ -491,14 +519,14 @@ function repayLoan(){
   s.debt -= pay;
 
   log("You repaid " + money(pay) + " of your debt.");
-  setNotice("Debt reduced. Nice.", "yellow");
+  setNotice("Debt reduced.", "yellow");
   render();
   saveGame(true);
 }
 
 function buyUpgrade(which){
   if(which === "stall"){
-    var cost = 120;
+    var cost = UPGRADE_COST_STALL;
     if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); return; }
     if(s.stage >= 1){ log("You already upgraded."); return; }
 
@@ -513,7 +541,7 @@ function buyUpgrade(which){
   }
 
   if(which === "storefront"){
-    var cost2 = 480;
+    var cost2 = UPGRADE_COST_STOREFRONT;
     if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); return; }
     if(s.stage >= 2){ log("You already have the top upgrade."); return; }
     if(s.stage < 1){ log("You need the first upgrade first."); return; }
@@ -529,7 +557,7 @@ function buyUpgrade(which){
   }
 
   if(which === "helper"){
-    var cost3 = 260;
+    var cost3 = UPGRADE_COST_HELPER;
     if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); return; }
 
     s.money -= cost3;
@@ -543,7 +571,7 @@ function buyUpgrade(which){
   }
 
   if(which === "newspaper"){
-    var cost4 = 200;
+    var cost4 = UPGRADE_COST_GAZETTE;
 
     if(!s.unlocked.newspaperOffer){
       log("You haven't met the Gazette yet.");
@@ -577,6 +605,8 @@ function buyUpgrade(which){
 function render(){
   if(!s) return;
 
+  updateButtonLabels(); // ✅ keep button costs accurate
+
   var role = ROLES[s.roleKey];
 
   setHTML("role_line", "<b>Role:</b> " + role.name);
@@ -607,14 +637,9 @@ function render(){
   show("story_line");
   show("log");
 
-  // Upgrades block appears once any upgrade becomes relevant:
-  if(s.unlocked.stall || s.unlocked.storefront || s.unlocked.newspaperOffer || s.stage >= 1){
-    show("upgrade_block");
-  } else {
-    hide("upgrade_block");
-  }
+  if(s.unlocked.stall || s.unlocked.storefront || s.unlocked.newspaperOffer || s.stage >= 1) show("upgrade_block");
+  else hide("upgrade_block");
 
-  // Buttons inside upgrades
   if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn"); else hide("upgradeToStallBtn");
   if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn"); else hide("upgradeToStoreBtn");
   if(s.stage >= 1) show("hireHelpBtn"); else hide("hireHelpBtn");
@@ -633,11 +658,8 @@ function startGame(){
   s = newState(roleKey);
 
   hide("setup_block");
-
-  // Hard reset visible UI
   resetUIBeforeStart();
 
-  // Only show the two starter actions immediately
   show("serveBtn");
   show("goodDeedBtn");
 
@@ -669,8 +691,6 @@ function loadGame(){
     s = JSON.parse(raw);
 
     hide("setup_block");
-
-    // Reset UI, then render based on save state
     resetUIBeforeStart();
 
     setNotice("Loaded save.", "yellow");
@@ -690,11 +710,11 @@ function restartGame(){
 }
 
 /* -----------------------------
-   Init on page load
+   Init
 -------------------------------- */
 (function init(){
-  // Hide everything before Start (even if CSS fails)
   resetUIBeforeStart();
+  updateButtonLabels();
 
   var raw = localStorage.getItem(SAVE_KEY);
   if(raw) setText("saveStatus", "Save found on this device.");
