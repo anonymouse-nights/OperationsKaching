@@ -22,7 +22,7 @@ body {
 }
 
 /* =========================================================
-   LAYOUT (Left/Right panels)
+   LAYOUT (Left / Right panels)
    ========================================================= */
 
 .panelRight {
@@ -38,14 +38,17 @@ body {
   box-sizing: border-box;
 }
 
-.clear { clear: both; }
+.clear {
+  clear: both;
+}
 
 /* =========================================================
    SHOW / HIDE HELPERS
-   (IMPORTANT: use !important so hidden can't be overridden)
    ========================================================= */
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 /* =========================================================
    BUTTONS
@@ -66,16 +69,48 @@ button:hover {
   padding: 2px 5px;
 }
 
-#restartButton { margin-left: 30px; }
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
-.home_button { display: inline-block; }
+.home_button {
+  display: inline-block;
+}
+
+#restartButton {
+  margin-left: 30px;
+}
+
+/* =========================================================
+   ACTIONS BLOCK (NEW CORE SYSTEM)
+   ========================================================= */
+
+#actions_block {
+  margin-bottom: 10px;
+}
+
+#actions_block button {
+  width: 100%;
+  text-align: left;
+}
+
+#actions_block .tiny {
+  float: right;
+}
 
 /* =========================================================
    TEXT HELPERS
    ========================================================= */
 
-.muted { color: #666; }
-.tiny  { font-size: 12px; color: #666; }
+.muted {
+  color: #666;
+}
+
+.tiny {
+  font-size: 12px;
+  color: #666;
+}
 
 /* =========================================================
    ASCII DISPLAY
@@ -88,16 +123,27 @@ pre {
   white-space: pre;
 }
 
-#ascii_display { padding: 6px 0; }
+#ascii_display {
+  padding: 6px 0;
+}
 
-#town_features pre { margin-top: 8px; }
+#town_features pre {
+  margin-top: 8px;
+}
 
 /* =========================================================
    NOTICE HIGHLIGHTING
    ========================================================= */
 
-.notice-yellow { color: #b58900; font-weight: bold; }
-.notice-red { color: #b00020; font-weight: bold; }
+.notice-yellow {
+  color: #b58900;
+  font-weight: bold;
+}
+
+.notice-red {
+  color: #b00020;
+  font-weight: bold;
+}
 
 .upgrade_button {
   background-color: #f8f2b1;
@@ -105,12 +151,42 @@ pre {
 }
 
 /* =========================================================
+   LOG
+   ========================================================= */
+
+#log {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid #ccc;
+  font-size: 12px;
+}
+
+/* =========================================================
    OPTIONAL DARK MODE HOOKS (future)
    ========================================================= */
 
-.dark_mode { background-color: #111; color: #F1F1F1; }
-.dark_button { background-color: #171717; color: #9D9D9D !important; }
-.dark_button:disabled { background-color: #404040; }
-.dark_link { color: orange; }
-.dark_link:visited { color: chocolate; }
-.dark_table { border-color: #F1F1F1; }
+.dark_mode {
+  background-color: #111;
+  color: #F1F1F1;
+}
+
+.dark_button {
+  background-color: #171717;
+  color: #9D9D9D !important;
+}
+
+.dark_button:disabled {
+  background-color: #404040;
+}
+
+.dark_link {
+  color: orange;
+}
+
+.dark_link:visited {
+  color: chocolate;
+}
+
+.dark_table {
+  border-color: #F1F1F1;
+}
