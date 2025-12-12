@@ -519,6 +519,8 @@
     // sell 1 unit
     st.gs.stock -= 1;
     st.money += finalPrice;
+     api.setNotice("+" + api.money(finalPrice) + " from sale", "yellow");
+api.log("Sale: +" + api.money(finalPrice));
     st.gs.totalSales += 1;
 
     var repDelta = 0;
