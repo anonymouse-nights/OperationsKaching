@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Town Trade !</title>
   <meta http-equiv="Cache-control" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -18,23 +19,23 @@
 
     <!-- =========================================================
          RIGHT PANEL
-         ASCII art gets injected here (from ascii.js via game.js)
+         Shows ASCII art (business + town features)
          ========================================================= -->
-   <div class="panelRight">
+    <div class="panelRight">
 
-  <!-- PLAYER BUSINESS ASCII -->
-  <pre id="ascii_display" class="hidden"></pre>
-  <span id="ascii_caption" class="tiny"></span>
+      <!-- PLAYER BUSINESS ASCII -->
+      <pre id="ascii_display" class="hidden"></pre>
+      <span id="ascii_caption" class="tiny"></span>
 
-  <hr style="margin:10px 0;" />
+      <hr style="margin:10px 0;" />
 
-  <!-- TOWN FEATURES ASCII -->
-  <div id="town_features" class="hidden">
-    <pre id="ascii_bank" class="hidden"></pre>
-    <pre id="ascii_gazette" class="hidden"></pre>
-  </div>
+      <!-- TOWN FEATURES ASCII (Gazette + Bank) -->
+      <div id="town_features" class="hidden">
+        <pre id="ascii_gazette" class="hidden"></pre>
+        <pre id="ascii_bank" class="hidden"></pre>
+      </div>
 
-</div>
+    </div>
 
     <!-- =========================================================
          LEFT PANEL
@@ -101,8 +102,8 @@
   </div>
 
   <!-- IMPORTANT: ASCII file must load BEFORE game.js -->
-<script src="ascii.js"></script>
-<script src="game.js"></script>
+  <script src="ascii.js"></script>
+  <script src="game.js"></script>
 
 </body>
 </html>
