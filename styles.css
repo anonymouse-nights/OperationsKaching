@@ -1,3 +1,3678 @@
+Skip to content
+You said:
+Okay in this code please seperate it so I know what is for each thing. Maybe we can seperate this into different code areas so its easier to update. I dont know anything about code and id like to learn. this seems simple enough
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!-- You're looking at the source code, hm, cheater ! :-) -->
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Town Trade !</title>
+    <meta http-equiv="Cache-control" content="no-cache" />
+    <style type="text/css">
+body {
+    background-color: #FFFFFF;
+    overflow-y:scroll;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    color:#282e32;
+}
+
+#tabs {
+    text-align: center;
+    margin: auto;
+    padding: 0px;
+    margin-top: 5px;
+    margin-bottom:6px;
+}
+#tabs li { list-style: none; display: inline; }
+
+#tabs li button {
+    color:#282e32;
+    padding:8px 14px 8px 14px;
+    text-decoration:none;
+    font-size:9px;
+    font-family:Verdana, Arial, Helvetica, sans-serif;
+    font-weight:bold;
+    text-transform:uppercase;
+    border:1px solid #464c54;
+}
+#tabs li button.active {
+    background-color:#f8f2b1;
+    color:#282e32;
+    border:1px solid #464c54;
+}
+
+#tab_town_trade {
+    display:block;
+    border: 2px solid transparent;
+}
+
+/* Candybox behavior helpers */
+.clear { clear:both; }
+button {
+    border:1px solid #464c54;
+    margin-bottom:2px;
+    padding:2px;
+    background-color: #ffffff;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 12px;
+}
+button:hover { border:2px solid #464c54; padding:1px; }
+
+/* Keep the "ASCII" feel */
+pre {
+    font-family: monospace;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Layout like Candy Box: right panel float */
+.panelRight { float:right; width: 420px; }
+.panelLeft { overflow: hidden; }
+
+/* Simple show/hide like Candy Box */
+.hidden { display:none; }
+
+/* Minor text helpers */
+.muted { color:#666; }
+.tiny { font-size: 12px; color:#666; }
+
+#restartButton { margin-left: 30px; }
+
+/* >>> NEW: noticeable event/upgrade highlighting <<< */
+.notice-yellow { color: #b58900; font-weight: bold; } /* readable yellow */
+.notice-red { color: #b00020; font-weight: bold; }    /* strong red */
+.upgrade_button { background-color:#f8f2b1; font-weight:bold; } /* candybox tab yellow */
+
+/* Dark mode hooks (optional later) */
+.dark_mode { background-color: #111; color: #F1F1F1; }
+.dark_button { background-color: #171717; color: #9D9D9D !important; }
+.dark_button:disabled { background-color: #404040; }
+.dark_link { color: orange; }
+.dark_link:visited { color: chocolate; }
+.dark_table { border-color: #F1F1F1; }
+</style>
+  </head>
+
+  <body>
+
+    <div id="tab_town_trade">
+
+      <!-- Right panel : town objects + ASCII stuff -->
+      <div class="panelRight">
+
+        <span id="town_object_cart" class="hidden">
+<pre>
+   __
+ _|__|_
+(  __  )   A little cart in town
+ |____|
+  /  \
+
+</pre>
+          <span class="tiny">Your first setup. It earns a tiny bit each second.</span><br/><br/>
+        </span>
+
+        <span id="town_object_stall" class="hidden">
+<pre>
+   _______
+  |  ___  |   Market stall
+  | |___| |
+  |_______|
+   /     \
+
+</pre>
+          <span class="tiny">More room, more customers.</span><br/><br/>
+        </span>
+
+        <span id="town_object_storefront" class="hidden">
+<pre>
+   _____________
+  |  TOWN TRADE |
+  |  _________  |
+  | |         | |
+  | |  OPEN   | |
+  |_|_________|_|
+
+</pre>
+          <span class="tiny">A real storefront. People start trusting you.</span><br/><br/>
+        </span>
+
+        <span id="town_object_newspaper" class="hidden">
+<pre>
+  .-------------------.
+  |  THE TOWN GAZETTE  |
+  |  "Local commerce!" |
+  '-------------------'
+
+</pre>
+          <span class="tiny">You can advertise or build reputation through community choices.</span><br/><br/>
+        </span>
+
+        <span id="town_object_bank" class="hidden">
+<pre>
+   ___________
+  |  BANK OF  |
+  |  RIVER    |
+  |___________|
+   |  __  |
+   | |  | |
+   |_|__|_|
+
+</pre>
+          <span class="tiny">Loans become available (and dangerous).</span><br/><br/>
+        </span>
+
+      </div>
+
+      <!-- Left panel : stats, buttons, narrative -->
+      <div class="panelLeft">
+
+        <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
+        <span id="saveStatus" class="tiny"></span><br/>
+
+        <button class="home_button" id="loadButton" onclick="loadGame();" style="visibility:visible">Load</button>
+        <button class="home_button" id="restartButton" onclick="restartGame();" style="visibility:visible">Restart Game</button>
+        <br/><br/>
+
+        <span id="setup_block">
+          <b>Pick a role to begin:</b><br/>
+          <select id="roleSelect">
+            <option value="general_store">General Store</option>
+            <option value="blacksmith">Blacksmith</option>
+            <option value="boarding_house">Boarding House</option>
+          </select>
+          <button class="home_button" onclick="startGame();">Start game</button><br/>
+          <span class="tiny muted">Candy Box vibe: things appear as you progress.</span>
+          <br/><br/>
+        </span>
+
+        <span id="role_line" class="hidden"></span><br/>
+
+        <span id="money_line" class="hidden"></span><br/>
+        <span id="rep_line" class="hidden"></span><br/>
+        <span id="stage_line" class="hidden"></span><br/>
+        <span id="income_line" class="hidden"></span><br/><br/>
+
+        <!-- story_line will now be yellow/red when needed -->
+        <span id="story_line" class="hidden"></span><br/><br/>
+
+        <!-- Action buttons -->
+        <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
+        <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Help a customer (reputation)</button><br/>
+        <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
+        <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
+        <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
+        <br/>
+
+        <!-- Upgrades (unlocked gradually) -->
+        <span id="upgrade_block" class="hidden">
+          <b><span class="notice-yellow">Upgrades:</span></b><br/>
+          <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+          <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+          <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+          <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+          <br/>
+        </span>
+
+        <pre id="log" class="hidden"></pre>
+
+      </div>
+
+      <br class="clear" />
+    </div>
+
+    <script type="text/javascript">
+      // ==========
+      // Game state
+      // ==========
+      var SAVE_KEY = "townTrade_cb_style_v1";
+
+      var ROLES = {
+        general_store: {
+          name: "General Store",
+          intro: "You set up a tiny cart selling essentials. Flour, cloth, candles… whatever keeps the town alive.",
+          baseIncome: 1.0,
+          serveMoney: 8,
+          serveRep: 2
+        },
+        blacksmith: {
+          name: "Blacksmith",
+          intro: "You start with a small forge corner. Repairs, horseshoes, hinges… fewer customers, bigger payouts.",
+          baseIncome: 1.0,
+          serveMoney: 10,
+          serveRep: 1
+        },
+        boarding_house: {
+          name: "Boarding House",
+          intro: "You begin by renting a spare room and offering meals. Reputation spreads fast in a small town.",
+          baseIncome: 1.0,
+          serveMoney: 7,
+          serveRep: 3
+        }
+      };
+
+      // Stages: 0 cart, 1 stall, 2 storefront
+      var STAGES = ["Cart in town", "Market stall", "Small storefront"];
+
+      var s = null;
+      var tickHandle = null;
+      var lastTick = null;
+
+      // NEW: one-time highlight messages (event line control)
+      var notice = { text: "", type: "" }; // type: "yellow" | "red" | ""
+
+      function newState(roleKey){
+        return {
+          roleKey: roleKey,
+          money: 50,
+          reputation: 60,
+          stage: 0,
+          debt: 0,
+
+          // modifiers
+          incomeBonus: 0,
+          repGainBonus: 0,
+          demand: 1.0,
+
+          // stats
+          seconds: 0,
+          served: 0,
+          goodServed: 0,
+          badServed: 0,
+
+          // unlock flags
+          unlocked: {
+            cart: true,
+            stall: false,
+            storefront: false,
+            newspaper: false,
+            bank: false
+          },
+
+          logLines: []
+        };
+      }
+
+      // ==========
+      // UI helpers
+      // ==========
+      function $(id){ return document.getElementById(id); }
+
+      function money(n){
+        n = Math.floor(n);
+        return "$" + n.toString();
+      }
+
+      function clamp(n, a, b){
+        if(n < a) return a;
+        if(n > b) return b;
+        return n;
+      }
+
+      function show(id){ $(id).className = $(id).className.replace("hidden",""); }
+      function hide(id){
+        if($(id).className.indexOf("hidden") === -1) $(id).className += " hidden";
+      }
+
+      function log(msg){
+        var ts = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+        s.logLines.unshift("[" + ts + "] " + msg);
+        if(s.logLines.length > 18) s.logLines.pop();
+        renderLog();
+      }
+
+      function renderLog(){
+        $("log").textContent = s.logLines.join("\n");
+      }
+
+      // NEW: set a noticeable event/unlock line
+      function setNotice(text, type){
+        notice.text = text || "";
+        notice.type = type || "";
+      }
+
+      // ==============
+      // Core mechanics
+      // ==============
+      function incomePerSecond(){
+        var role = ROLES[s.roleKey];
+        var stageBonus = s.stage * 0.8;
+        return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
+      }
+
+      function startLoop(){
+        stopLoop();
+        lastTick = new Date().getTime();
+        tickHandle = setInterval(tick, 1000);
+      }
+
+      function stopLoop(){
+        if(tickHandle) clearInterval(tickHandle);
+        tickHandle = null;
+      }
+
+      function tick(){
+        if(!s) return;
+
+        s.seconds += 1;
+
+        // passive earnings
+        s.money += incomePerSecond();
+
+        // tiny drift: demand
+        if(s.seconds % 10 === 0){
+          var drift = (s.reputation - 50) / 5000;
+          s.demand = clamp(s.demand + drift, 0.85, 1.20);
+        }
+
+        // debt interest if bank exists
+        if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
+          var interest = Math.max(1, Math.floor(s.debt * 0.02));
+          s.debt += interest;
+          log("Bank interest increased your debt by " + money(interest) + ".");
+          if(s.debt >= 350){
+            setNotice("WARNING: Your debt is getting dangerous.", "red");
+          }
+        }
+
+        // unlock progression
+        checkUnlocks();
+
+        // autosave
+        if(s.seconds % 15 === 0) saveGame(true);
+
+        render();
+      }
+
+      function checkUnlocks(){
+        s.unlocked.cart = true;
+
+        // Stall unlock
+        if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+          s.unlocked.stall = true;
+          $("upgrade_block").className = $("upgrade_block").className.replace("hidden","");
+          show("upgradeToStallBtn");
+          $("town_object_stall").className = $("town_object_stall").className.replace("hidden","");
+          log("You notice a better spot in town… maybe you can upgrade into a stall.");
+          setNotice("NEW UPGRADE AVAILABLE: Cart → Stall", "yellow");
+        }
+
+        // Storefront unlock
+        if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+          s.unlocked.storefront = true;
+          show("upgradeToStoreBtn");
+          $("town_object_storefront").className = $("town_object_storefront").className.replace("hidden","");
+          log("A small storefront is up for rent. That would change everything.");
+          setNotice("NEW UPGRADE AVAILABLE: Stall → Storefront", "yellow");
+        }
+
+        // Newspaper unlock
+        if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+          s.unlocked.newspaper = true;
+          show("unlockNewsBtn");
+          $("town_object_newspaper").className = $("town_object_newspaper").className.replace("hidden","");
+          log("The Town Gazette offers to feature you (for a price).");
+          setNotice("NEW OPTION: Support the Town Gazette (advertising)", "yellow");
+        }
+
+        // Bank unlock
+        if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+          s.unlocked.bank = true;
+          show("loanBtn");
+          show("repayBtn");
+          $("town_object_bank").className = $("town_object_bank").className.replace("hidden","");
+          log("The bank clerk offers you a loan. (Be careful.)");
+          setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+        }
+
+        // Enable other action buttons after start
+        show("serveBtn");
+        show("goodDeedBtn");
+
+        // Advertise only after newspaper supported
+        if(s.unlocked.newspaper) show("advertiseBtn");
+      }
+
+      // =======
+      // Actions
+      // =======
+      function serveCustomer(){
+        var role = ROLES[s.roleKey];
+
+        var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
+        var isGood = (Math.random() < goodChance);
+
+        s.served += 1;
+
+        if(isGood){
+          s.goodServed += 1;
+          var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
+          s.money += payout;
+
+          var repGain = Math.floor((role.serveRep + s.repGainBonus) * 1.0);
+          s.reputation = clamp(s.reputation + repGain, 0, 100);
+
+          log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+          if(repGain >= 3) setNotice("Nice! Your reputation is climbing.", "yellow");
+        } else {
+          s.badServed += 1;
+          var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
+          s.money = Math.max(0, s.money - loss);
+
+          var repHit = Math.max(1, 4 - Math.floor(s.stage/2));
+          s.reputation = clamp(s.reputation - repHit, 0, 100);
+
+          log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+          setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
+        }
+
+        render();
+        saveGame(true);
+      }
+
+      function doGoodDeed(){
+        var cost = 12 + (s.stage*4);
+        if(s.money < cost){
+          log("You want to help, but you don't have enough cash right now.");
+          setNotice("Not enough money for that right now.", "red");
+          return;
+        }
+        s.money -= cost;
+
+        var rep = 4 + Math.floor(s.stage/2);
+        s.reputation = clamp(s.reputation + rep, 0, 100);
+
+        log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+        setNotice("Good deed completed: reputation increased.", "yellow");
+        render();
+        saveGame(true);
+      }
+
+      function advertise(){
+        var cost = 30 + (s.stage*10);
+        if(s.money < cost){
+          log("Advertising costs money. You don't have enough.");
+          setNotice("Not enough money to advertise.", "red");
+          return;
+        }
+        s.money -= cost;
+
+        s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
+        log("You ran an advertisement in the Gazette. Demand increased a bit.");
+        setNotice("Advertising worked: demand increased.", "yellow");
+        render();
+        saveGame(true);
+      }
+
+      function takeLoan(){
+        if(!s.unlocked.bank){
+          log("No bank available yet.");
+          return;
+        }
+        var amount = 120;
+        s.money += amount;
+        s.debt += amount;
+        log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+        setNotice("Loan taken: remember debt grows with interest.", "red");
+        render();
+        saveGame(true);
+      }
+
+      function repayLoan(){
+        if(s.debt <= 0){
+          log("You have no debt.");
+          setNotice("No debt to repay.", "yellow");
+          return;
+        }
+        var pay = Math.min(80, s.debt);
+        if(s.money < pay){
+          log("You don't have enough money to repay right now.");
+          setNotice("Not enough money to repay debt.", "red");
+          return;
+        }
+        s.money -= pay;
+        s.debt -= pay;
+        log("You repaid " + money(pay) + " of your debt.");
+        setNotice("Debt reduced. Nice.", "yellow");
+        render();
+        saveGame(true);
+      }
+
+      function buyUpgrade(which){
+        if(which === "stall"){
+          var cost = 120;
+          if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); setNotice("Need " + money(cost) + " for Cart → Stall.", "red"); return; }
+          if(s.stage >= 1){ log("You already have a stall or better."); return; }
+          s.money -= cost;
+          s.stage = 1;
+          s.incomeBonus += 1;
+          log("Upgrade complete: Cart → Stall. Income increased.");
+          setNotice("Upgrade purchased: Cart → Stall", "yellow");
+          render();
+          saveGame(true);
+          return;
+        }
+
+        if(which === "storefront"){
+          var cost2 = 480;
+          if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); setNotice("Need " + money(cost2) + " for Stall → Storefront.", "red"); return; }
+          if(s.stage >= 2){ log("You already have a storefront."); return; }
+          if(s.stage < 1){ log("You need the stall first."); setNotice("You need the Stall before the Storefront.", "red"); return; }
+          s.money -= cost2;
+          s.stage = 2;
+          s.incomeBonus += 3;
+          log("Upgrade complete: Stall → Storefront. Steady income jumped.");
+          setNotice("Upgrade purchased: Stall → Storefront", "yellow");
+          render();
+          saveGame(true);
+          return;
+        }
+
+        if(which === "helper"){
+          var cost3 = 260;
+          if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); setNotice("Need " + money(cost3) + " to hire help.", "red"); return; }
+          s.money -= cost3;
+          s.incomeBonus += 2;
+          s.repGainBonus += 1;
+          log("You hired steady help. Income +2/sec and customer service improves.");
+          setNotice("Upgrade purchased: Steady help hired.", "yellow");
+          render();
+          saveGame(true);
+          return;
+        }
+
+        if(which === "newspaper"){
+          var cost4 = 200;
+          if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); setNotice("Need " + money(cost4) + " to support the Gazette.", "red"); return; }
+          s.money -= cost4;
+          s.unlocked.newspaper = true;
+          s.reputation = clamp(s.reputation + 6, 0, 100);
+          log("The Gazette features your business. Advertising unlocked.");
+          setNotice("Unlocked: advertising (Gazette).", "yellow");
+          render();
+          saveGame(true);
+          return;
+        }
+      }
+
+      // ==========
+      // Rendering
+      // ==========
+      function render(){
+        var role = ROLES[s.roleKey];
+
+        $("role_line").innerHTML = "<b>Role:</b> " + role.name;
+        $("money_line").innerHTML = "<b>Money:</b> " + money(s.money) + " <span class='muted'>(Debt: " + money(s.debt) + ")</span>";
+        $("rep_line").innerHTML = "<b>Reputation:</b> " + s.reputation + " / 100";
+        $("stage_line").innerHTML = "<b>Business:</b> " + STAGES[s.stage];
+        $("income_line").innerHTML = "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second <span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>";
+
+        // story line evolves like Candy Box
+        var baseStory = "";
+        if(s.seconds < 8){
+          baseStory = role.intro;
+        } else if(s.stage === 0){
+          baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
+        } else if(s.stage === 1){
+          baseStory = "Your stall is drawing attention. Reputation will decide your long-term future here.";
+        } else {
+          baseStory = "A storefront changes your standing. Bigger decisions are coming (laws, taxes, competition).";
+        }
+
+        // NEW: apply yellow/red notice on top of story
+        var noticeHtml = "";
+        if(notice.text){
+          if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+          else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+          else noticeHtml = notice.text + "<br/><br/>";
+        }
+        $("story_line").innerHTML = noticeHtml + baseStory;
+
+        // show objects based on stage/unlocks
+        $("town_object_cart").className = s.unlocked.cart ? $("town_object_cart").className.replace("hidden","") : $("town_object_cart").className;
+        if(s.stage >= 1) $("town_object_stall").className = $("town_object_stall").className.replace("hidden","");
+        if(s.stage >= 2) $("town_object_storefront").className = $("town_object_storefront").className.replace("hidden","");
+
+        if(s.unlocked.newspaper) $("town_object_newspaper").className = $("town_object_newspaper").className.replace("hidden","");
+        if(s.unlocked.bank) $("town_object_bank").className = $("town_object_bank").className.replace("hidden","");
+
+        // upgrade buttons appear based on unlocks/stage
+        if(s.unlocked.stall) show("upgrade_block");
+        if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn");
+        if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn");
+        if(s.stage >= 1) show("hireHelpBtn");
+        if(s.unlocked.newspaper) show("unlockNewsBtn");
+
+        // show core lines/buttons/log
+        show("role_line");
+        show("money_line");
+        show("rep_line");
+        show("stage_line");
+        show("income_line");
+        show("story_line");
+        show("serveBtn");
+        show("goodDeedBtn");
+        show("log");
+
+        if(s.unlocked.newspaper) show("advertiseBtn");
+        if(s.unlocked.bank) { show("loanBtn"); show("repayBtn"); }
+
+        renderLog();
+      }
+
+      // ==========
+      // Game start
+      // ==========
+      function startGame(){
+        var roleKey = $("roleSelect").value;
+        s = newState(roleKey);
+
+        hide("setup_block");
+
+        $("town_object_cart").className = $("town_object_cart").className.replace("hidden","");
+
+        setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+        render();
+        log("You begin. The town watches.");
+        startLoop();
+        saveGame(true);
+      }
+
+      // ==========
+      // Save / Load
+      // ==========
+      function saveGame(silent){
+        if(!s) return;
+        try{
+          localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+          if(!silent){
+            $("saveStatus").textContent = "Saved.";
+            setTimeout(function(){ $("saveStatus").textContent = ""; }, 1200);
+          }
+        } catch(e){
+          $("saveStatus").textContent = "Save failed (storage blocked).";
+        }
+      }
+
+      function loadGame(){
+        try{
+          var raw = localStorage.getItem(SAVE_KEY);
+          if(!raw){ alert("No save found on this device."); return; }
+          s = JSON.parse(raw);
+          hide("setup_block");
+          setNotice("Loaded save.", "yellow");
+          render();
+          log("Loaded save.");
+          startLoop();
+        } catch(e){
+          alert("Load failed.");
+        }
+      }
+
+      function restartGame(){
+        if(!confirm("Restart game? This clears your save.")) return;
+        localStorage.removeItem(SAVE_KEY);
+        stopLoop();
+        location.reload();
+      }
+
+      (function init(){
+        var raw = localStorage.getItem(SAVE_KEY);
+        if(raw){
+          $("saveStatus").textContent = "Save found on this device.";
+        }
+      })();
+
+    </script>
+
+  </body>
+</html>
+ChatGPT said:
+Absolutely — the easiest way to “separate it” and make it learnable is to split it into 3 files:
+
+index.html → page structure (buttons, text, layout)
+
+styles.css → all styling (colors, fonts, layout)
+
+game.js → all game logic (money, upgrades, saving, etc.)
+
+Below is your exact game, just reorganized and heavily labeled so you can tell what each part does.
+
+1) index.html (HTML = what you SEE on the page)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Town Trade !</title>
+  <meta http-equiv="Cache-control" content="no-cache" />
+
+  <!-- 1) CSS file = all styling -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- =========================================================
+       MAIN GAME WRAPPER
+       Everything in the game lives inside this one div.
+       ========================================================= -->
+  <div id="tab_town_trade">
+
+    <!-- =========================================================
+         RIGHT PANEL
+         Shows the ASCII "town objects" you unlock (cart, stall, etc.)
+         ========================================================= -->
+    <div class="panelRight">
+
+      <!-- Cart -->
+      <span id="town_object_cart" class="hidden">
+<pre>
+   __
+ _|__|_
+(  __  )   A little cart in town
+ |____|
+  /  \
+
+</pre>
+        <span class="tiny">Your first setup. It earns a tiny bit each second.</span><br/><br/>
+      </span>
+
+      <!-- Stall -->
+      <span id="town_object_stall" class="hidden">
+<pre>
+   _______
+  |  ___  |   Market stall
+  | |___| |
+  |_______|
+   /     \
+
+</pre>
+        <span class="tiny">More room, more customers.</span><br/><br/>
+      </span>
+
+      <!-- Storefront -->
+      <span id="town_object_storefront" class="hidden">
+<pre>
+   _____________
+  |  TOWN TRADE |
+  |  _________  |
+  | |         | |
+  | |  OPEN   | |
+  |_|_________|_|
+
+</pre>
+        <span class="tiny">A real storefront. People start trusting you.</span><br/><br/>
+      </span>
+
+      <!-- Newspaper -->
+      <span id="town_object_newspaper" class="hidden">
+<pre>
+  .-------------------.
+  |  THE TOWN GAZETTE  |
+  |  "Local commerce!" |
+  '-------------------'
+
+</pre>
+        <span class="tiny">You can advertise or build reputation through community choices.</span><br/><br/>
+      </span>
+
+      <!-- Bank -->
+      <span id="town_object_bank" class="hidden">
+<pre>
+   ___________
+  |  BANK OF  |
+  |  RIVER    |
+  |___________|
+   |  __  |
+   | |  | |
+   |_|__|_|
+
+</pre>
+        <span class="tiny">Loans become available (and dangerous).</span><br/><br/>
+      </span>
+
+    </div>
+
+    <!-- =========================================================
+         LEFT PANEL
+         Buttons, stats, story text, upgrades, and the log
+         ========================================================= -->
+    <div class="panelLeft">
+
+      <!-- Save/Load/Restart -->
+      <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
+      <span id="saveStatus" class="tiny"></span><br/>
+
+      <button class="home_button" id="loadButton" onclick="loadGame();" style="visibility:visible">Load</button>
+      <button class="home_button" id="restartButton" onclick="restartGame();" style="visibility:visible">Restart Game</button>
+      <br/><br/>
+
+      <!-- Start setup block -->
+      <span id="setup_block">
+        <b>Pick a role to begin:</b><br/>
+        <select id="roleSelect">
+          <option value="general_store">General Store</option>
+          <option value="blacksmith">Blacksmith</option>
+          <option value="boarding_house">Boarding House</option>
+        </select>
+        <button class="home_button" onclick="startGame();">Start game</button><br/>
+        <span class="tiny muted">Candy Box vibe: things appear as you progress.</span>
+        <br/><br/>
+      </span>
+
+      <!-- Main stat lines -->
+      <span id="role_line" class="hidden"></span><br/>
+      <span id="money_line" class="hidden"></span><br/>
+      <span id="rep_line" class="hidden"></span><br/>
+      <span id="stage_line" class="hidden"></span><br/>
+      <span id="income_line" class="hidden"></span><br/><br/>
+
+      <!-- Story line -->
+      <span id="story_line" class="hidden"></span><br/><br/>
+
+      <!-- Action buttons -->
+      <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
+      <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Help a customer (reputation)</button><br/>
+      <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
+      <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
+      <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
+      <br/>
+
+      <!-- Upgrades -->
+      <span id="upgrade_block" class="hidden">
+        <b><span class="notice-yellow">Upgrades:</span></b><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+        <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+        <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+        <br/>
+      </span>
+
+      <!-- Log (the scrolling “Candy Box” feel) -->
+      <pre id="log" class="hidden"></pre>
+
+    </div>
+
+    <br class="clear" />
+  </div>
+
+  <!-- 2) JS file = all game logic -->
+  <script src="game.js"></script>
+</body>
+</html>
+2) styles.css (CSS = how it LOOKS)
+/* =========================================================
+   GLOBAL PAGE STYLE
+   ========================================================= */
+body {
+  background-color: #FFFFFF;
+  overflow-y: scroll;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  color: #282e32;
+}
+
+pre {
+  font-family: monospace;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* =========================================================
+   LAYOUT (Left/Right panels like Candy Box)
+   ========================================================= */
+.panelRight { float: right; width: 420px; }
+.panelLeft { overflow: hidden; }
+.clear { clear: both; }
+
+/* =========================================================
+   SHOW / HIDE HELPERS
+   ========================================================= */
+.hidden { display: none; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+button {
+  border: 1px solid #464c54;
+  margin-bottom: 2px;
+  padding: 2px;
+  background-color: #ffffff;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+}
+button:hover { border: 2px solid #464c54; padding: 1px; }
+
+#restartButton { margin-left: 30px; }
+
+/* =========================================================
+   SMALL TEXT HELPERS
+   ========================================================= */
+.muted { color: #666; }
+.tiny { font-size: 12px; color: #666; }
+
+/* =========================================================
+   NOTICE HIGHLIGHTING (yellow/red messages)
+   ========================================================= */
+.notice-yellow { color: #b58900; font-weight: bold; }
+.notice-red { color: #b00020; font-weight: bold; }
+.upgrade_button { background-color: #f8f2b1; font-weight: bold; }
+
+/* =========================================================
+   OPTIONAL DARK MODE HOOKS (not active unless you add the class)
+   ========================================================= */
+.dark_mode { background-color: #111; color: #F1F1F1; }
+.dark_button { background-color: #171717; color: #9D9D9D !important; }
+.dark_button:disabled { background-color: #404040; }
+.dark_link { color: orange; }
+.dark_link:visited { color: chocolate; }
+.dark_table { border-color: #F1F1F1; }
+3) game.js (JavaScript = what it DOES)
+/* =========================================================
+   TOWN TRADE - GAME LOGIC
+   This file controls:
+   - game state (money, rep, stage, unlocks)
+   - ticking income loop
+   - button actions
+   - rendering UI
+   - saving/loading
+   ========================================================= */
+
+/* -------------------------
+   1) GAME STATE + CONSTANTS
+   ------------------------- */
+
+var SAVE_KEY = "townTrade_cb_style_v1";
+
+var ROLES = {
+  general_store: {
+    name: "General Store",
+    intro: "You set up a tiny cart selling essentials. Flour, cloth, candles… whatever keeps the town alive.",
+    baseIncome: 1.0,
+    serveMoney: 8,
+    serveRep: 2
+  },
+  blacksmith: {
+    name: "Blacksmith",
+    intro: "You start with a small forge corner. Repairs, horseshoes, hinges… fewer customers, bigger payouts.",
+    baseIncome: 1.0,
+    serveMoney: 10,
+    serveRep: 1
+  },
+  boarding_house: {
+    name: "Boarding House",
+    intro: "You begin by renting a spare room and offering meals. Reputation spreads fast in a small town.",
+    baseIncome: 1.0,
+    serveMoney: 7,
+    serveRep: 3
+  }
+};
+
+var STAGES = ["Cart in town", "Market stall", "Small storefront"];
+
+// Main state object (becomes your save file)
+var s = null;
+
+// Loop controls
+var tickHandle = null;
+var lastTick = null;
+
+// A “highlight message” shown above the story
+var notice = { text: "", type: "" }; // type: "yellow" | "red" | ""
+
+/* Build a fresh new save state */
+function newState(roleKey){
+  return {
+    roleKey: roleKey,
+    money: 50,
+    reputation: 60,
+    stage: 0,
+    debt: 0,
+
+    incomeBonus: 0,
+    repGainBonus: 0,
+    demand: 1.0,
+
+    seconds: 0,
+    served: 0,
+    goodServed: 0,
+    badServed: 0,
+
+    unlocked: {
+      cart: true,
+      stall: false,
+      storefront: false,
+      newspaper: false,
+      bank: false
+    },
+
+    logLines: []
+  };
+}
+
+/* -------------------------
+   2) SMALL UI HELPERS
+   ------------------------- */
+
+function $(id){ return document.getElementById(id); }
+
+function money(n){
+  n = Math.floor(n);
+  return "$" + n.toString();
+}
+
+function clamp(n, a, b){
+  if(n < a) return a;
+  if(n > b) return b;
+  return n;
+}
+
+function show(id){
+  $(id).className = $(id).className.replace("hidden","");
+}
+function hide(id){
+  if($(id).className.indexOf("hidden") === -1) $(id).className += " hidden";
+}
+
+function log(msg){
+  var ts = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  s.logLines.unshift("[" + ts + "] " + msg);
+  if(s.logLines.length > 18) s.logLines.pop();
+  renderLog();
+}
+
+function renderLog(){
+  $("log").textContent = s.logLines.join("\n");
+}
+
+function setNotice(text, type){
+  notice.text = text || "";
+  notice.type = type || "";
+}
+
+/* -------------------------
+   3) CORE GAME MATH + LOOP
+   ------------------------- */
+
+function incomePerSecond(){
+  var role = ROLES[s.roleKey];
+  var stageBonus = s.stage * 0.8;
+  return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
+}
+
+function startLoop(){
+  stopLoop();
+  lastTick = new Date().getTime();
+  tickHandle = setInterval(tick, 1000);
+}
+
+function stopLoop(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = null;
+}
+
+function tick(){
+  if(!s) return;
+
+  s.seconds += 1;
+
+  // Passive income every second
+  s.money += incomePerSecond();
+
+  // Demand drifts slowly based on reputation
+  if(s.seconds % 10 === 0){
+    var drift = (s.reputation - 50) / 5000;
+    s.demand = clamp(s.demand + drift, 0.85, 1.20);
+  }
+
+  // Bank debt interest
+  if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
+    var interest = Math.max(1, Math.floor(s.debt * 0.02));
+    s.debt += interest;
+    log("Bank interest increased your debt by " + money(interest) + ".");
+    if(s.debt >= 350){
+      setNotice("WARNING: Your debt is getting dangerous.", "red");
+    }
+  }
+
+  // Check if anything new should appear
+  checkUnlocks();
+
+  // Autosave
+  if(s.seconds % 15 === 0) saveGame(true);
+
+  render();
+}
+
+/* -------------------------
+   4) UNLOCKS (things appear)
+   ------------------------- */
+
+function checkUnlocks(){
+  s.unlocked.cart = true;
+
+  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+    s.unlocked.stall = true;
+    show("upgrade_block");
+    show("upgradeToStallBtn");
+    show("town_object_stall");
+    log("You notice a better spot in town… maybe you can upgrade into a stall.");
+    setNotice("NEW UPGRADE AVAILABLE: Cart → Stall", "yellow");
+  }
+
+  if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+    s.unlocked.storefront = true;
+    show("upgradeToStoreBtn");
+    show("town_object_storefront");
+    log("A small storefront is up for rent. That would change everything.");
+    setNotice("NEW UPGRADE AVAILABLE: Stall → Storefront", "yellow");
+  }
+
+  if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+    s.unlocked.newspaper = true;
+    show("unlockNewsBtn");
+    show("town_object_newspaper");
+    log("The Town Gazette offers to feature you (for a price).");
+    setNotice("NEW OPTION: Support the Town Gazette (advertising)", "yellow");
+  }
+
+  if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+    s.unlocked.bank = true;
+    show("loanBtn");
+    show("repayBtn");
+    show("town_object_bank");
+    log("The bank clerk offers you a loan. (Be careful.)");
+    setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+  }
+
+  // Core actions show after start
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  if(s.unlocked.newspaper) show("advertiseBtn");
+}
+
+/* -------------------------
+   5) BUTTON ACTIONS
+   ------------------------- */
+
+function serveCustomer(){
+  var role = ROLES[s.roleKey];
+
+  var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
+  var isGood = (Math.random() < goodChance);
+
+  s.served += 1;
+
+  if(isGood){
+    s.goodServed += 1;
+    var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
+    s.money += payout;
+
+    var repGain = Math.floor((role.serveRep + s.repGainBonus) * 1.0);
+    s.reputation = clamp(s.reputation + repGain, 0, 100);
+
+    log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+    if(repGain >= 3) setNotice("Nice! Your reputation is climbing.", "yellow");
+  } else {
+    s.badServed += 1;
+    var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
+    s.money = Math.max(0, s.money - loss);
+
+    var repHit = Math.max(1, 4 - Math.floor(s.stage/2));
+    s.reputation = clamp(s.reputation - repHit, 0, 100);
+
+    log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+    setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
+  }
+
+  render();
+  saveGame(true);
+}
+
+function doGoodDeed(){
+  var cost = 12 + (s.stage*4);
+  if(s.money < cost){
+    log("You want to help, but you don't have enough cash right now.");
+    setNotice("Not enough money for that right now.", "red");
+    return;
+  }
+
+  s.money -= cost;
+
+  var rep = 4 + Math.floor(s.stage/2);
+  s.reputation = clamp(s.reputation + rep, 0, 100);
+
+  log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+  setNotice("Good deed completed: reputation increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function advertise(){
+  var cost = 30 + (s.stage*10);
+  if(s.money < cost){
+    log("Advertising costs money. You don't have enough.");
+    setNotice("Not enough money to advertise.", "red");
+    return;
+  }
+
+  s.money -= cost;
+  s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
+
+  log("You ran an advertisement in the Gazette. Demand increased a bit.");
+  setNotice("Advertising worked: demand increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function takeLoan(){
+  if(!s.unlocked.bank){
+    log("No bank available yet.");
+    return;
+  }
+
+  var amount = 120;
+  s.money += amount;
+  s.debt += amount;
+
+  log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+  setNotice("Loan taken: remember debt grows with interest.", "red");
+  render();
+  saveGame(true);
+}
+
+function repayLoan(){
+  if(s.debt <= 0){
+    log("You have no debt.");
+    setNotice("No debt to repay.", "yellow");
+    return;
+  }
+
+  var pay = Math.min(80, s.debt);
+  if(s.money < pay){
+    log("You don't have enough money to repay right now.");
+    setNotice("Not enough money to repay debt.", "red");
+    return;
+  }
+
+  s.money -= pay;
+  s.debt -= pay;
+
+  log("You repaid " + money(pay) + " of your debt.");
+  setNotice("Debt reduced. Nice.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function buyUpgrade(which){
+  if(which === "stall"){
+    var cost = 120;
+    if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); setNotice("Need " + money(cost) + " for Cart → Stall.", "red"); return; }
+    if(s.stage >= 1){ log("You already have a stall or better."); return; }
+    s.money -= cost;
+    s.stage = 1;
+    s.incomeBonus += 1;
+    log("Upgrade complete: Cart → Stall. Income increased.");
+    setNotice("Upgrade purchased: Cart → Stall", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "storefront"){
+    var cost2 = 480;
+    if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); setNotice("Need " + money(cost2) + " for Stall → Storefront.", "red"); return; }
+    if(s.stage >= 2){ log("You already have a storefront."); return; }
+    if(s.stage < 1){ log("You need the stall first."); setNotice("You need the Stall before the Storefront.", "red"); return; }
+    s.money -= cost2;
+    s.stage = 2;
+    s.incomeBonus += 3;
+    log("Upgrade complete: Stall → Storefront. Steady income jumped.");
+    setNotice("Upgrade purchased: Stall → Storefront", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "helper"){
+    var cost3 = 260;
+    if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); setNotice("Need " + money(cost3) + " to hire help.", "red"); return; }
+    s.money -= cost3;
+    s.incomeBonus += 2;
+    s.repGainBonus += 1;
+    log("You hired steady help. Income +2/sec and customer service improves.");
+    setNotice("Upgrade purchased: Steady help hired.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "newspaper"){
+    var cost4 = 200;
+    if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); setNotice("Need " + money(cost4) + " to support the Gazette.", "red"); return; }
+    s.money -= cost4;
+    s.unlocked.newspaper = true;
+    s.reputation = clamp(s.reputation + 6, 0, 100);
+    log("The Gazette features your business. Advertising unlocked.");
+    setNotice("Unlocked: advertising (Gazette).", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+}
+
+/* -------------------------
+   6) RENDERING (update screen)
+   ------------------------- */
+
+function render(){
+  var role = ROLES[s.roleKey];
+
+  $("role_line").innerHTML = "<b>Role:</b> " + role.name;
+  $("money_line").innerHTML = "<b>Money:</b> " + money(s.money) + " <span class='muted'>(Debt: " + money(s.debt) + ")</span>";
+  $("rep_line").innerHTML = "<b>Reputation:</b> " + s.reputation + " / 100";
+  $("stage_line").innerHTML = "<b>Business:</b> " + STAGES[s.stage];
+  $("income_line").innerHTML = "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second <span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>";
+
+  var baseStory = "";
+  if(s.seconds < 8){
+    baseStory = role.intro;
+  } else if(s.stage === 0){
+    baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
+  } else if(s.stage === 1){
+    baseStory = "Your stall is drawing attention. Reputation will decide your long-term future here.";
+  } else {
+    baseStory = "A storefront changes your standing. Bigger decisions are coming (laws, taxes, competition).";
+  }
+
+  var noticeHtml = "";
+  if(notice.text){
+    if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+    else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+    else noticeHtml = notice.text + "<br/><br/>";
+  }
+
+  $("story_line").innerHTML = noticeHtml + baseStory;
+
+  // Right-side objects
+  if(s.unlocked.cart) show("town_object_cart");
+  if(s.stage >= 1) show("town_object_stall");
+  if(s.stage >= 2) show("town_object_storefront");
+  if(s.unlocked.newspaper) show("town_object_newspaper");
+  if(s.unlocked.bank) show("town_object_bank");
+
+  // Show UI blocks
+  show("role_line");
+  show("money_line");
+  show("rep_line");
+  show("stage_line");
+  show("income_line");
+  show("story_line");
+  show("serveBtn");
+  show("goodDeedBtn");
+  show("log");
+
+  // Upgrades
+  if(s.unlocked.stall) show("upgrade_block");
+  if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn");
+  if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn");
+  if(s.stage >= 1) show("hireHelpBtn");
+  if(s.unlocked.newspaper) show("unlockNewsBtn");
+
+  if(s.unlocked.newspaper) show("advertiseBtn");
+  if(s.unlocked.bank) { show("loanBtn"); show("repayBtn"); }
+
+  renderLog();
+}
+
+/* -------------------------
+   7) START / SAVE / LOAD
+   ------------------------- */
+
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+  show("town_object_cart");
+
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+
+function saveGame(silent){
+  if(!s) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    if(!silent){
+      $("saveStatus").textContent = "Saved.";
+      setTimeout(function(){ $("saveStatus").textContent = ""; }, 1200);
+    }
+  } catch(e){
+    $("saveStatus").textContent = "Save failed (storage blocked).";
+  }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw){ alert("No save found on this device."); return; }
+    s = JSON.parse(raw);
+    hide("setup_block");
+    setNotice("Loaded save.", "yellow");
+    render();
+    log("Loaded save.");
+    startLoop();
+  } catch(e){
+    alert("Load failed.");
+  }
+}
+
+function restartGame(){
+  if(!confirm("Restart game? This clears your save.")) return;
+  localStorage.removeItem(SAVE_KEY);
+  stopLoop();
+  location.reload();
+}
+
+/* When page loads, show “save found” if it exists */
+(function init(){
+  var raw = localStorage.getItem(SAVE_KEY);
+  if(raw){
+    $("saveStatus").textContent = "Save found on this device.";
+  }
+})();
+How to use this (super simple)
+Make a folder
+
+Put these 3 files inside:
+
+index.html
+
+styles.css
+
+game.js
+
+Double-click index.html to run it.
+
+If you want, I can also “teach mode” this code by adding a 1–2 sentence comment above every single function explaining what it does (without changing behavior).
+
+You said:
+Okay where do i take this away from the main screen? Id like to take out all notes to candy box, i just want a simple "inspired by candy box and candybox 2"
+ChatGPT said:
+Perfect question 👍 — this is pure cleanup, no logic changes.
+
+You currently have three places where “Candy Box” is mentioned on the main screen. We’ll remove those and replace them with one simple credit line.
+
+✅ What you want in the end
+❌ No “Candy Box vibe”, “like Candy Box”, etc. shown during gameplay
+
+✅ One small line somewhere like:
+
+Inspired by Candy Box & Candy Box 2
+
+1️⃣ REMOVE Candy Box text from the main screen (HTML)
+❌ Remove this line (setup screen)
+In index.html, find this:
+
+<span class="tiny muted">Candy Box vibe: things appear as you progress.</span>
+Delete it entirely.
+
+✅ Result: No Candy Box mention during role selection.
+
+2️⃣ REMOVE Candy Box behavior comments (optional, dev-only)
+These are not visible to players, only comments for developers.
+You can remove them if you want the code to feel “cleaner.”
+
+In styles.css, you can safely delete comments like:
+/* Layout like Candy Box: right panel float */
+and
+
+/* Simple show/hide like Candy Box */
+Deleting comments does not affect the game at all.
+
+3️⃣ REMOVE Candy Box wording from JavaScript (story logic)
+In game.js, search for this comment:
+
+// story line evolves like Candy Box
+You can:
+
+❌ Delete it, or
+
+✏️ Change it to something neutral like:
+
+// Story text changes as the game progresses
+Again — comments only, no behavior change.
+
+4️⃣ ADD a simple credit line (recommended)
+This is the right way to credit inspiration without cluttering gameplay.
+
+📍 Best place: bottom of the LEFT panel
+In index.html, scroll to the bottom of this section:
+
+<div class="panelLeft">
+Just above this line:
+
+</div>
+Add:
+
+<div class="tiny muted" style="margin-top:20px;">
+  Inspired by Candy Box & Candy Box 2
+</div>
+✅ Result
+Small
+
+Subtle
+
+Always visible
+
+Not intrusive
+
+Legally + ethically clean
+
+🧠 Why this is the cleanest approach
+Players experience your game, not references
+
+Inspiration is credited once, politely
+
+Your project feels more original and professional
+
+Easy to remove later if you ever want
+
+TL;DR – Exact checklist
+Delete
+
+Candy Box vibe: things appear as you progress. (HTML)
+
+Any Candy Box comments you don’t want (CSS/JS)
+
+Add
+
+Inspired by Candy Box & Candy Box 2
+If you want next:
+
+I can help you add a Credits / About toggle instead
+
+Or help rename mechanics so they feel even more “yours”
+
+Or explain how to future-proof this so you can reskin it later
+
+Just tell me 👌
+
+You said:
+I want to be able to specify the different roles. The game play of a bording house is different then a general store. THey will use different ASCII items
+ChatGPT said:
+Yep — the clean way to do this is to make the game data-driven per role, so each role can have:
+
+its own ASCII art (cart/stall/storefront equivalents)
+
+its own upgrades (different names + costs + effects)
+
+its own actions (different buttons / different outcomes)
+
+its own unlock rules (boarding house might unlock “kitchen expansion” instead of “stall”)
+
+Below is a simple approach that keeps your code easy to learn and expand.
+
+What we’re going to change
+✅ Goal
+Instead of “one set of town objects for everyone”, we’ll do:
+
+ASCII objects are role-specific
+
+When the player picks a role, the right ASCII objects show up
+
+We’ll do this in two parts:
+
+HTML: create a “container” for each role’s ASCII
+
+JS: show the right container based on selected role
+
+1) Update index.html (Role-specific ASCII areas)
+Replace your current Right Panel ASCII spans with three role containers like this:
+
+<div class="panelRight">
+
+  <!-- =========================
+       GENERAL STORE ASCII SET
+       ========================= -->
+  <div id="ascii_general_store" class="hidden">
+
+    <span id="gs_object_cart" class="hidden">
+<pre>
+   __
+ _|__|_
+(  __  )   General Store Cart
+ |____|
+  /  \
+</pre>
+      <span class="tiny">A small essentials cart.</span><br/><br/>
+    </span>
+
+    <span id="gs_object_stall" class="hidden">
+<pre>
+   _______
+  | FLOUR |   Market Stall
+  |CLOTH  |
+  |_______|
+   /     \
+</pre>
+      <span class="tiny">More room for goods.</span><br/><br/>
+    </span>
+
+    <span id="gs_object_storefront" class="hidden">
+<pre>
+   _____________
+  | GENERAL     |
+  |  STORE      |
+  |  _________  |
+  | |  OPEN   | |
+  |_|_________|_|
+</pre>
+      <span class="tiny">A real storefront.</span><br/><br/>
+    </span>
+
+  </div>
+
+  <!-- =========================
+       BLACKSMITH ASCII SET
+       ========================= -->
+  <div id="ascii_blacksmith" class="hidden">
+
+    <span id="bs_object_forge" class="hidden">
+<pre>
+   (  )
+  (    )   Small Forge
+   )__(
+  /____\
+</pre>
+      <span class="tiny">A corner forge for small jobs.</span><br/><br/>
+    </span>
+
+    <span id="bs_object_anvil" class="hidden">
+<pre>
+   ____ 
+ _/ __ \_   Anvil Station
+|__|  |__|
+   /__\
+</pre>
+      <span class="tiny">Bigger jobs, better pay.</span><br/><br/>
+    </span>
+
+    <span id="bs_object_shop" class="hidden">
+<pre>
+   _____________
+  | BLACKSMITH  |
+  |  _________  |
+  | |  OPEN   | |
+  |_|_________|_|
+</pre>
+      <span class="tiny">A proper smithy.</span><br/><br/>
+    </span>
+
+  </div>
+
+  <!-- =========================
+       BOARDING HOUSE ASCII SET
+       ========================= -->
+  <div id="ascii_boarding_house" class="hidden">
+
+    <span id="bh_object_room" class="hidden">
+<pre>
+  __________
+ |  ROOM #1 |  Spare Room
+ |__________|
+ |__|    |__|
+</pre>
+      <span class="tiny">You rent a spare room.</span><br/><br/>
+    </span>
+
+    <span id="bh_object_dining" class="hidden">
+<pre>
+  _____________
+ |  DINING HALL|  Meal Service
+ |__  ____  ___|
+    ||____||
+</pre>
+      <span class="tiny">Meals build reputation fast.</span><br/><br/>
+    </span>
+
+    <span id="bh_object_inn" class="hidden">
+<pre>
+   _______________
+  | THE BOARDING  |
+  |     HOUSE     |
+  |  ___________  |
+  | |   OPEN    | |
+  |_|___________|_|
+</pre>
+      <span class="tiny">An inn with steady guests.</span><br/><br/>
+    </span>
+
+  </div>
+
+</div>
+✅ Now you have 3 separate “ASCII sets”.
+Nothing shows until JS chooses which one to reveal.
+
+2) Update game.js (Show ASCII based on role)
+Add these helper functions near your other UI helpers:
+
+function hideAllRoleAscii(){
+  hide("ascii_general_store");
+  hide("ascii_blacksmith");
+  hide("ascii_boarding_house");
+}
+
+// Show the chosen role's ASCII container
+function showRoleAscii(roleKey){
+  hideAllRoleAscii();
+
+  if(roleKey === "general_store") show("ascii_general_store");
+  if(roleKey === "blacksmith") show("ascii_blacksmith");
+  if(roleKey === "boarding_house") show("ascii_boarding_house");
+}
+Now update startGame() to call it right after you set s:
+
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+
+  // NEW: show correct ASCII set for chosen role
+  showRoleAscii(roleKey);
+
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+3) Update render() so it shows the correct objects per role
+Right now your render() shows these IDs:
+
+town_object_cart, town_object_stall, etc.
+
+We’re replacing that with role-specific ones.
+
+Add this function in game.js:
+
+function renderRoleObjects(){
+  // Hide ALL role objects first (so only the right ones show)
+  // General store
+  hide("gs_object_cart"); hide("gs_object_stall"); hide("gs_object_storefront");
+  // Blacksmith
+  hide("bs_object_forge"); hide("bs_object_anvil"); hide("bs_object_shop");
+  // Boarding house
+  hide("bh_object_room"); hide("bh_object_dining"); hide("bh_object_inn");
+
+  // Now show based on role + stage
+  if(s.roleKey === "general_store"){
+    if(s.stage >= 0) show("gs_object_cart");
+    if(s.stage >= 1) show("gs_object_stall");
+    if(s.stage >= 2) show("gs_object_storefront");
+  }
+
+  if(s.roleKey === "blacksmith"){
+    if(s.stage >= 0) show("bs_object_forge");
+    if(s.stage >= 1) show("bs_object_anvil");
+    if(s.stage >= 2) show("bs_object_shop");
+  }
+
+  if(s.roleKey === "boarding_house"){
+    if(s.stage >= 0) show("bh_object_room");
+    if(s.stage >= 1) show("bh_object_dining");
+    if(s.stage >= 2) show("bh_object_inn");
+  }
+}
+Then inside your render() function, replace the old “show objects based on stage/unlocks” section with:
+
+renderRoleObjects();
+✅ Result after these changes
+Pick General Store → you see General Store ASCII progression
+
+Pick Blacksmith → you see forge/anvil/shop progression
+
+Pick Boarding House → you see room/dining/inn progression
+
+Next step: make gameplay truly different per role
+Once the ASCII is split, the next “real difference” is:
+
+Examples
+Boarding House: instead of “Serve customer”, it could be:
+
+“Rent a room”
+
+“Serve a meal”
+
+“Host travelers”
+
+Reputation matters more, demand swings more
+
+Blacksmith: fewer actions but bigger payouts:
+
+“Forge an order”
+
+“Repair a wagon”
+
+More risk: “Bad forge job” costs reputation + money
+
+General Store: steady income + steady customers:
+
+“Sell supplies”
+
+“Order inventory”
+
+Inventory mechanic later if you want
+
+If you tell me (quick bullet points is fine) what each role should do, I’ll wire the button actions so each role actually plays differently (not just different art).
+
+You said:
+Can we put all the ascii art in another file and just pull from that file?
+ChatGPT said:
+Yes — this is exactly the right instinct, and it’s a very clean, beginner-friendly way to organize the project 👍
+We’ll do this in a way that:
+
+keeps all ASCII art in one file
+
+lets each role have different art
+
+does not require advanced JS concepts
+
+is easy to edit without breaking the game
+
+Below is the recommended approach for where you are skill-wise.
+
+✅ Best Approach (Simple + Safe)
+Use one separate JavaScript file that contains only ASCII art data
+📁 Files you’ll have:
+
+index.html
+styles.css
+game.js
+ascii.js   ← NEW (only ASCII art lives here)
+We are not fetching files dynamically yet (that adds complexity).
+Instead, we load ascii.js before game.js, and the game just “reads” from it.
+
+1️⃣ Create ascii.js (ASCII ART ONLY)
+This file has no logic, just data.
+
+/* =========================================================
+   ASCII ART DEFINITIONS
+   Each role has its own progression by stage
+   stage 0 = starting
+   stage 1 = mid
+   stage 2 = advanced
+   ========================================================= */
+
+var ASCII_ART = {
+  general_store: {
+    0: `
+   __
+ _|__|_
+(  __  )   General Store Cart
+ |____|
+  /  \\
+`,
+    1: `
+   _______
+  | FLOUR |   Market Stall
+  |CLOTH  |
+  |_______|
+   /     \\
+`,
+    2: `
+   _____________
+  | GENERAL     |
+  |  STORE      |
+  |  _________  |
+  | |  OPEN   | |
+  |_|_________|_|
+`
+  },
+
+  blacksmith: {
+    0: `
+   (  )
+  (    )   Small Forge
+   )__(
+  /____\\
+`,
+    1: `
+   ____ 
+ _/ __ \\_   Anvil Station
+|__|  |__|
+   /__\\
+`,
+    2: `
+   _____________
+  | BLACKSMITH  |
+  |  _________  |
+  | |  OPEN   | |
+  |_|_________|_|
+`
+  },
+
+  boarding_house: {
+    0: `
+  __________
+ |  ROOM #1 |  Spare Room
+ |__________|
+ |__|    |__|
+`,
+    1: `
+  _____________
+ |  DINING HALL|  Meal Service
+ |__  ____  ___|
+    ||____||
+`,
+    2: `
+   _______________
+  | THE BOARDING  |
+  |     HOUSE     |
+  |  ___________  |
+  | |   OPEN    | |
+  |_|___________|_|
+`
+  }
+};
+🧠 Why this is good
+You can edit ASCII without touching game logic
+
+You can add stage 3, 4, 5 later
+
+You can add new roles by copying a block
+
+2️⃣ Update index.html (Add a single placeholder)
+In the RIGHT PANEL, replace all the individual ASCII spans with one container:
+
+<div class="panelRight">
+
+  <!-- Role-based ASCII art gets injected here -->
+  <pre id="ascii_display" class="hidden"></pre>
+  <span id="ascii_caption" class="tiny"></span>
+
+</div>
+That’s it.
+We’re no longer hardcoding ASCII in HTML.
+
+3️⃣ Load the ASCII file BEFORE the game
+At the bottom of index.html, make sure scripts load in this order:
+
+<script src="ascii.js"></script>
+<script src="game.js"></script>
+⚠️ Order matters:
+
+ascii.js defines the art
+
+game.js uses it
+
+4️⃣ Update game.js to show ASCII from the file
+Add this helper function in game.js (near your render helpers):
+
+function renderAscii(){
+  var artBlock = $("ascii_display");
+  var caption = $("ascii_caption");
+
+  if(!ASCII_ART[s.roleKey]) return;
+
+  var art = ASCII_ART[s.roleKey][s.stage];
+
+  if(art){
+    artBlock.textContent = art;
+    show("ascii_display");
+  }
+
+  // Optional captions per role
+  if(s.roleKey === "general_store") caption.textContent = "Your business grows with each upgrade.";
+  if(s.roleKey === "blacksmith") caption.textContent = "Fewer jobs, heavier rewards.";
+  if(s.roleKey === "boarding_house") caption.textContent = "Guests come and go. Reputation matters.";
+}
+5️⃣ Call it from render()
+Inside your existing render() function, add:
+
+renderAscii();
+That’s it.
+
+✅ Final Result
+ASCII art lives entirely in ascii.js
+
+game.js only asks:
+“What role are we?” + “What stage are we?”
+
+HTML stays clean and simple
+
+You can now:
+
+add new roles
+
+add more stages
+
+reskin the game
+
+swap ASCII without touching logic
+
+🧠 Mental Model (important for learning)
+Think of it like this:
+
+HTML = empty picture frame
+
+ascii.js = art storage closet
+
+game.js = decides which picture goes in the frame
+
+Want the next step?
+Next clean upgrades would be:
+
+Role-specific actions (boarding house ≠ store)
+
+Role-specific upgrade names
+
+Role-specific win / fail conditions
+
+Later: swapping ASCII for emojis or pixel art
+
+If you want, tell me which role you want to expand first and I’ll design its unique gameplay loop next.
+
+You said:
+REdo my entire index.html code: <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Town Trade !</title>
+  <meta http-equiv="Cache-control" content="no-cache" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- =========================================================
+       MAIN GAME WRAPPER
+       Everything in the game lives inside this one div.
+       ========================================================= -->
+  <div id="tab_town_trade">
+
+    <!-- =========================================================
+         RIGHT PANEL
+         Shows the ASCII "town objects" you unlock (cart, stall, etc.)
+         ========================================================= -->
+   <div class="panelRight">
+
+  <!-- Role-based ASCII art gets injected here -->
+  <pre id="ascii_display" class="hidden"></pre>
+  <span id="ascii_caption" class="tiny"></span>
+
+</div>
+
+    <!-- =========================================================
+         LEFT PANEL
+         Buttons, stats, story text, upgrades, and the log
+         ========================================================= -->
+    <div class="panelLeft">
+
+      <!-- Save/Load/Restart -->
+      <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
+      <span id="saveStatus" class="tiny"></span><br/>
+
+      <button class="home_button" id="loadButton" onclick="loadGame();" style="visibility:visible">Load</button>
+      <button class="home_button" id="restartButton" onclick="restartGame();" style="visibility:visible">Restart Game</button>
+      <br/><br/>
+
+      <!-- Start setup block -->
+      <span id="setup_block">
+        <b>Pick a role to begin:</b><br/>
+        <select id="roleSelect">
+          <option value="general_store">General Store</option>
+          <option value="blacksmith">Blacksmith</option>
+          <option value="boarding_house">Boarding House</option>
+        </select>
+        <button class="home_button" onclick="startGame();">Start game</button><br/>
+        <span class="tiny muted">Inspired by Candybox Games</span>
+        <br/><br/>
+      </span>
+
+      <!-- Main stat lines -->
+      <span id="role_line" class="hidden"></span><br/>
+      <span id="money_line" class="hidden"></span><br/>
+      <span id="rep_line" class="hidden"></span><br/>
+      <span id="stage_line" class="hidden"></span><br/>
+      <span id="income_line" class="hidden"></span><br/><br/>
+
+      <!-- Story line -->
+      <span id="story_line" class="hidden"></span><br/><br/>
+
+      <!-- Action buttons -->
+      <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
+      <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Help a customer (reputation)</button><br/>
+      <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
+      <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
+      <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
+      <br/>
+
+      <!-- Upgrades -->
+      <span id="upgrade_block" class="hidden">
+        <b><span class="notice-yellow">Upgrades:</span></b><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+        <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+        <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+        <br/>
+      </span>
+
+      <pre id="log" class="hidden"></pre>
+
+    </div>
+
+    <br class="clear" />
+  </div>
+
+  <!-- 2) JS file = all game logic -->
+  <script src="game.js"></script>
+</body>
+</html>
+ChatGPT said:
+Here’s your fully redone index.html (clean, correct indentation, right panel ASCII placeholder, and loads ascii.js before game.js so the ASCII file works).
+
+Copy/paste this whole thing:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Town Trade !</title>
+  <meta http-equiv="Cache-control" content="no-cache" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- =========================================================
+       MAIN GAME WRAPPER
+       Everything in the game lives inside this one div.
+       ========================================================= -->
+  <div id="tab_town_trade">
+
+    <!-- =========================================================
+         RIGHT PANEL
+         ASCII art gets injected here (from ascii.js via game.js)
+         ========================================================= -->
+    <div class="panelRight">
+      <pre id="ascii_display" class="hidden"></pre>
+      <span id="ascii_caption" class="tiny"></span>
+    </div>
+
+    <!-- =========================================================
+         LEFT PANEL
+         Buttons, stats, story text, upgrades, and the log
+         ========================================================= -->
+    <div class="panelLeft">
+
+      <!-- Save/Load/Restart -->
+      <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
+      <span id="saveStatus" class="tiny"></span><br/>
+
+      <button class="home_button" id="loadButton" onclick="loadGame();" style="visibility:visible">Load</button>
+      <button class="home_button" id="restartButton" onclick="restartGame();" style="visibility:visible">Restart Game</button>
+      <br/><br/>
+
+      <!-- Start setup block -->
+      <span id="setup_block">
+        <b>Pick a role to begin:</b><br/>
+        <select id="roleSelect">
+          <option value="general_store">General Store</option>
+          <option value="blacksmith">Blacksmith</option>
+          <option value="boarding_house">Boarding House</option>
+        </select>
+
+        <button class="home_button" onclick="startGame();">Start game</button><br/>
+        <span class="tiny muted">Inspired by Candy Box &amp; Candy Box 2</span>
+        <br/><br/>
+      </span>
+
+      <!-- Main stat lines -->
+      <span id="role_line" class="hidden"></span><br/>
+      <span id="money_line" class="hidden"></span><br/>
+      <span id="rep_line" class="hidden"></span><br/>
+      <span id="stage_line" class="hidden"></span><br/>
+      <span id="income_line" class="hidden"></span><br/><br/>
+
+      <!-- Story line -->
+      <span id="story_line" class="hidden"></span><br/><br/>
+
+      <!-- Action buttons -->
+      <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
+      <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Help a customer (reputation)</button><br/>
+      <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
+      <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
+      <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
+      <br/>
+
+      <!-- Upgrades -->
+      <span id="upgrade_block" class="hidden">
+        <b><span class="notice-yellow">Upgrades:</span></b><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+        <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+        <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+        <br/>
+      </span>
+
+      <!-- Log -->
+      <pre id="log" class="hidden"></pre>
+
+    </div>
+
+    <br class="clear" />
+  </div>
+
+  <!-- IMPORTANT: ASCII file must load BEFORE game.js -->
+  <script src="ascii.js"></script>
+  <script src="game.js"></script>
+
+</body>
+</html>
+If you want, paste your current game.js and I’ll make sure it has the renderAscii() function wired correctly for ascii_display + ascii_caption (so it actually shows the role-based art).
+
+You said:
+Okay.  where do we put bank and town gazzette?
+ChatGPT said:
+Great question — this is a design decision, not just code, so I’ll explain the why first, then show you exactly where it goes and how to wire it without making things complicated.
+
+🧠 Conceptually: what are the Bank & Gazette?
+They are town-wide institutions, not your business.
+
+So they should:
+
+NOT replace your role’s main ASCII (store / forge / inn)
+
+Appear in addition to your business
+
+Feel like the town “growing around you”
+
+That means:
+
+Main ASCII = your business
+Secondary ASCII = town features (bank, gazette)
+
+✅ Clean Solution (Recommended)
+RIGHT PANEL layout:
+[ Your Business ASCII ]
+-----------------------
+[ Town Features ASCII ]
+So the player always sees:
+
+their role-based building (top)
+
+the town evolving underneath it (bank, newspaper, etc.)
+
+1️⃣ Update index.html (add a Town Features section)
+Replace your current RIGHT PANEL with this:
+
+<div class="panelRight">
+
+  <!-- =========================
+       PLAYER BUSINESS (ROLE)
+       ========================= -->
+  <pre id="ascii_display" class="hidden"></pre>
+  <span id="ascii_caption" class="tiny"></span>
+
+  <hr style="margin:10px 0;" />
+
+  <!-- =========================
+       TOWN FEATURES (GLOBAL)
+       ========================= -->
+  <div id="town_features" class="hidden">
+
+    <pre id="ascii_bank" class="hidden"></pre>
+    <pre id="ascii_gazette" class="hidden"></pre>
+
+  </div>
+
+</div>
+✅ Nothing fancy
+✅ Still readable
+✅ Easy to expand later (church, jail, railroad, etc.)
+
+2️⃣ Add Bank & Gazette ASCII to ascii.js
+Add this below your role ASCII definitions:
+
+/* =========================================================
+   TOWN-WIDE ASCII (not role-specific)
+   ========================================================= */
+
+var TOWN_ASCII = {
+  bank: `
+   ___________
+  |  BANK OF  |
+  |  RIVER    |
+  |___________|
+   |  __  |
+   | |  | |
+   |_|__|_|
+`,
+
+  gazette: `
+  .-------------------.
+  |  THE TOWN GAZETTE  |
+  |  "Local commerce!"|
+  '-------------------'
+`
+};
+3️⃣ Render them in game.js
+Add this helper function near renderAscii():
+
+function renderTownFeatures(){
+  hide("town_features");
+  hide("ascii_bank");
+  hide("ascii_gazette");
+
+  if(s.unlocked.bank){
+    $("ascii_bank").textContent = TOWN_ASCII.bank;
+    show("ascii_bank");
+    show("town_features");
+  }
+
+  if(s.unlocked.newspaper){
+    $("ascii_gazette").textContent = TOWN_ASCII.gazette;
+    show("ascii_gazette");
+    show("town_features");
+  }
+}
+4️⃣ Call it from render()
+Inside your existing render() function, add:
+
+renderAscii();        // your business
+renderTownFeatures(); // the town
+Order matters — business first, town second.
+
+✅ Result in-game
+Early game
+[ Your Cart / Forge / Room ]
+Mid game
+[ Your Stall / Anvil / Dining Hall ]
+--------------------
+[ Town Gazette ]
+Late game
+[ Storefront / Smithy / Inn ]
+--------------------
+[ Town Gazette ]
+[ Bank ]
+Feels alive.
+Feels like progress.
+Feels very Candy Box–inspired without copying it.
+
+🧠 Why this scales well
+Later you can add:
+
+Church (reputation control)
+
+Jail (crime consequences)
+
+Railroad (late-game demand boost)
+
+Competitor shops
+
+Town hall (taxes, laws)
+
+All without touching role ASCII.
+
+If you want next
+Next clean steps (pick one):
+1️⃣ Bank mechanics overhaul (loans, default, repo events)
+2️⃣ Gazette choices (PR spin vs truth vs propaganda)
+3️⃣ Role-specific reactions to bank/gazette
+4️⃣ Add a minimap-style ASCII town layout
+
+Just tell me which one you want to tackle next 👌
+
+You said:
+give me a full game.js script
+ChatGPT said:
+/* =========================================================
+   TOWN TRADE - game.js
+   Uses:
+   - ascii.js must load FIRST and define:
+       var ASCII_ART = { roleKey: {0:"...",1:"...",2:"..."} }
+       var TOWN_ASCII = { bank:"...", gazette:"..." }
+   HTML must include:
+     <pre id="ascii_display" class="hidden"></pre>
+     <span id="ascii_caption" class="tiny"></span>
+     <div id="town_features" class="hidden">
+       <pre id="ascii_bank" class="hidden"></pre>
+       <pre id="ascii_gazette" class="hidden"></pre>
+     </div>
+   ========================================================= */
+
+/* -------------------------
+   1) GAME CONSTANTS / DATA
+   ------------------------- */
+
+var SAVE_KEY = "townTrade_cb_style_v2";
+
+var ROLES = {
+  general_store: {
+    name: "General Store",
+    intro: "You set up shop selling essentials. Flour, cloth, candles… whatever keeps the town alive.",
+    baseIncome: 1.0,
+    serveMoney: 8,
+    serveRep: 2
+  },
+  blacksmith: {
+    name: "Blacksmith",
+    intro: "You start with a small forge corner. Fewer customers, bigger payouts.",
+    baseIncome: 1.0,
+    serveMoney: 10,
+    serveRep: 1
+  },
+  boarding_house: {
+    name: "Boarding House",
+    intro: "You begin by renting a spare room and offering meals. Reputation spreads fast in a small town.",
+    baseIncome: 1.0,
+    serveMoney: 7,
+    serveRep: 3
+  }
+};
+
+// Stage progression (still used for game logic + display)
+var STAGES = ["Stage 1", "Stage 2", "Stage 3"];
+
+// The live save-state object
+var s = null;
+
+// Tick loop
+var tickHandle = null;
+var lastTick = null;
+
+// Highlight notice shown above the story
+var notice = { text: "", type: "" }; // type: "yellow" | "red" | ""
+
+/* -------------------------
+   2) STATE FACTORY
+   ------------------------- */
+
+function newState(roleKey){
+  return {
+    roleKey: roleKey,
+
+    money: 50,
+    reputation: 60,
+    stage: 0,
+
+    debt: 0,
+
+    // modifiers
+    incomeBonus: 0,
+    repGainBonus: 0,
+    demand: 1.0,
+
+    // stats
+    seconds: 0,
+    served: 0,
+    goodServed: 0,
+    badServed: 0,
+
+    // unlock flags
+    unlocked: {
+      stall: false,       // stage upgrade 0->1 unlocked
+      storefront: false,  // stage upgrade 1->2 unlocked
+      newspaper: false,
+      bank: false
+    },
+
+    logLines: []
+  };
+}
+
+/* -------------------------
+   3) DOM / UI HELPERS
+   ------------------------- */
+
+function $(id){ return document.getElementById(id); }
+
+function money(n){
+  n = Math.floor(n);
+  return "$" + n.toString();
+}
+
+function clamp(n, a, b){
+  if(n < a) return a;
+  if(n > b) return b;
+  return n;
+}
+
+function show(id){
+  var el = $(id);
+  if(!el) return;
+  el.className = el.className.replace("hidden", "").trim();
+}
+
+function hide(id){
+  var el = $(id);
+  if(!el) return;
+  if(el.className.indexOf("hidden") === -1) el.className += " hidden";
+}
+
+function log(msg){
+  var ts = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  s.logLines.unshift("[" + ts + "] " + msg);
+  if(s.logLines.length > 18) s.logLines.pop();
+  renderLog();
+}
+
+function renderLog(){
+  var el = $("log");
+  if(!el) return;
+  el.textContent = s.logLines.join("\n");
+}
+
+function setNotice(text, type){
+  notice.text = text || "";
+  notice.type = type || "";
+}
+
+/* -------------------------
+   4) ASCII RENDERING
+   ------------------------- */
+
+function renderAscii(){
+  var artBlock = $("ascii_display");
+  var caption = $("ascii_caption");
+  if(!artBlock || !caption) return;
+  if(!s) return;
+
+  // Pull role art from ASCII_ART (from ascii.js)
+  var roleSet = (typeof ASCII_ART !== "undefined") ? ASCII_ART[s.roleKey] : null;
+  var art = roleSet ? roleSet[s.stage] : null;
+
+  if(art){
+    artBlock.textContent = art;
+    show("ascii_display");
+  } else {
+    // fallback if missing
+    artBlock.textContent = "";
+    hide("ascii_display");
+  }
+
+  // Simple captions (you can customize these anytime)
+  if(s.roleKey === "general_store") caption.textContent = "You grow by keeping steady customers and trust.";
+  else if(s.roleKey === "blacksmith") caption.textContent = "Fewer jobs, heavier rewards. Mistakes cost.";
+  else if(s.roleKey === "boarding_house") caption.textContent = "Guests talk. Reputation matters fast.";
+  else caption.textContent = "";
+}
+
+function renderTownFeatures(){
+  if(!s) return;
+
+  hide("town_features");
+  hide("ascii_bank");
+  hide("ascii_gazette");
+
+  // Pull town art from TOWN_ASCII (from ascii.js)
+  var town = (typeof TOWN_ASCII !== "undefined") ? TOWN_ASCII : null;
+
+  if(s.unlocked.newspaper && town && town.gazette){
+    $("ascii_gazette").textContent = town.gazette;
+    show("ascii_gazette");
+    show("town_features");
+  }
+
+  if(s.unlocked.bank && town && town.bank){
+    $("ascii_bank").textContent = town.bank;
+    show("ascii_bank");
+    show("town_features");
+  }
+}
+
+/* -------------------------
+   5) CORE MECHANICS / LOOP
+   ------------------------- */
+
+function incomePerSecond(){
+  var role = ROLES[s.roleKey];
+  var stageBonus = s.stage * 0.8;
+  return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
+}
+
+function startLoop(){
+  stopLoop();
+  lastTick = new Date().getTime();
+  tickHandle = setInterval(tick, 1000);
+}
+
+function stopLoop(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = null;
+}
+
+function tick(){
+  if(!s) return;
+
+  s.seconds += 1;
+
+  // Passive earnings
+  s.money += incomePerSecond();
+
+  // Demand drifts with reputation
+  if(s.seconds % 10 === 0){
+    var drift = (s.reputation - 50) / 5000;
+    s.demand = clamp(s.demand + drift, 0.85, 1.20);
+  }
+
+  // Bank interest
+  if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
+    var interest = Math.max(1, Math.floor(s.debt * 0.02));
+    s.debt += interest;
+    log("Bank interest increased your debt by " + money(interest) + ".");
+    if(s.debt >= 350){
+      setNotice("WARNING: Your debt is getting dangerous.", "red");
+    }
+  }
+
+  checkUnlocks();
+
+  // Autosave
+  if(s.seconds % 15 === 0) saveGame(true);
+
+  render();
+}
+
+/* -------------------------
+   6) UNLOCKS
+   ------------------------- */
+
+function checkUnlocks(){
+  // Stage 1 upgrade becomes available
+  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+    s.unlocked.stall = true;
+    show("upgrade_block");
+    show("upgradeToStallBtn");
+    log("You spot a better opportunity to expand.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
+  }
+
+  // Stage 2 upgrade becomes available
+  if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+    s.unlocked.storefront = true;
+    show("upgradeToStoreBtn");
+    log("A bigger expansion is possible now.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
+  }
+
+  // Gazette unlock
+  if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+    s.unlocked.newspaper = true;
+    show("unlockNewsBtn");
+    log("The Town Gazette offers to feature you (for a price).");
+    setNotice("NEW OPTION: Support the Town Gazette (advertising)", "yellow");
+  }
+
+  // Bank unlock
+  if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+    s.unlocked.bank = true;
+    show("loanBtn");
+    show("repayBtn");
+    log("The bank clerk offers you a loan. (Be careful.)");
+    setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+  }
+
+  // Core buttons appear after start
+  show("serveBtn");
+  show("goodDeedBtn");
+  show("log");
+
+  // Advertise only after newspaper supported
+  if(s.unlocked.newspaper) show("advertiseBtn");
+
+  // Show/hide upgrade area
+  if(s.unlocked.stall || s.unlocked.storefront || s.stage >= 1) show("upgrade_block");
+}
+
+/* -------------------------
+   7) ACTIONS (BUTTONS)
+   ------------------------- */
+
+function serveCustomer(){
+  var role = ROLES[s.roleKey];
+
+  var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
+  var isGood = (Math.random() < goodChance);
+
+  s.served += 1;
+
+  if(isGood){
+    s.goodServed += 1;
+
+    var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
+    s.money += payout;
+
+    var repGain = Math.floor((role.serveRep + s.repGainBonus) * 1.0);
+    s.reputation = clamp(s.reputation + repGain, 0, 100);
+
+    log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+    if(repGain >= 3) setNotice("Nice! Your reputation is climbing.", "yellow");
+  } else {
+    s.badServed += 1;
+
+    var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
+    s.money = Math.max(0, s.money - loss);
+
+    var repHit = Math.max(1, 4 - Math.floor(s.stage/2));
+    s.reputation = clamp(s.reputation - repHit, 0, 100);
+
+    log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+    setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
+  }
+
+  render();
+  saveGame(true);
+}
+
+function doGoodDeed(){
+  var cost = 12 + (s.stage*4);
+  if(s.money < cost){
+    log("You want to help, but you don't have enough cash right now.");
+    setNotice("Not enough money for that right now.", "red");
+    return;
+  }
+
+  s.money -= cost;
+
+  var rep = 4 + Math.floor(s.stage/2);
+  s.reputation = clamp(s.reputation + rep, 0, 100);
+
+  log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+  setNotice("Good deed completed: reputation increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function advertise(){
+  var cost = 30 + (s.stage*10);
+  if(s.money < cost){
+    log("Advertising costs money. You don't have enough.");
+    setNotice("Not enough money to advertise.", "red");
+    return;
+  }
+
+  s.money -= cost;
+  s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
+
+  log("You ran an advertisement in the Gazette. Demand increased a bit.");
+  setNotice("Advertising worked: demand increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function takeLoan(){
+  if(!s.unlocked.bank){
+    log("No bank available yet.");
+    return;
+  }
+
+  var amount = 120;
+  s.money += amount;
+  s.debt += amount;
+
+  log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+  setNotice("Loan taken: remember debt grows with interest.", "red");
+  render();
+  saveGame(true);
+}
+
+function repayLoan(){
+  if(s.debt <= 0){
+    log("You have no debt.");
+    setNotice("No debt to repay.", "yellow");
+    return;
+  }
+
+  var pay = Math.min(80, s.debt);
+  if(s.money < pay){
+    log("You don't have enough money to repay right now.");
+    setNotice("Not enough money to repay debt.", "red");
+    return;
+  }
+
+  s.money -= pay;
+  s.debt -= pay;
+
+  log("You repaid " + money(pay) + " of your debt.");
+  setNotice("Debt reduced. Nice.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function buyUpgrade(which){
+  // Stage 0 -> Stage 1
+  if(which === "stall"){
+    var cost = 120;
+    if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); setNotice("Need " + money(cost) + " to upgrade.", "red"); return; }
+    if(s.stage >= 1){ log("You already upgraded."); return; }
+
+    s.money -= cost;
+    s.stage = 1;
+    s.incomeBonus += 1;
+
+    log("Upgrade complete: Stage 1 → Stage 2. Income increased.");
+    setNotice("Upgrade purchased: Stage 2 unlocked.", "yellow");
+    render();
+    saveGame(true);
+    return;
+  }
+
+  // Stage 1 -> Stage 2
+  if(which === "storefront"){
+    var cost2 = 480;
+    if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); setNotice("Need " + money(cost2) + " to upgrade.", "red"); return; }
+    if(s.stage >= 2){ log("You already have the top upgrade."); return; }
+    if(s.stage < 1){ log("You need the first upgrade first."); setNotice("You need the first upgrade before this.", "red"); return; }
+
+    s.money -= cost2;
+    s.stage = 2;
+    s.incomeBonus += 3;
+
+    log("Upgrade complete: Stage 2 → Stage 3. Steady income jumped.");
+    setNotice("Upgrade purchased: Stage 3 unlocked.", "yellow");
+    render();
+    saveGame(true);
+    return;
+  }
+
+  // Hire help
+  if(which === "helper"){
+    var cost3 = 260;
+    if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); setNotice("Need " + money(cost3) + " to hire help.", "red"); return; }
+
+    s.money -= cost3;
+    s.incomeBonus += 2;
+    s.repGainBonus += 1;
+
+    log("You hired steady help. Income +2/sec and service improves.");
+    setNotice("Upgrade purchased: Steady help hired.", "yellow");
+    render();
+    saveGame(true);
+    return;
+  }
+
+  // Support Gazette (enables advertising + rep boost)
+  if(which === "newspaper"){
+    var cost4 = 200;
+    if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); setNotice("Need " + money(cost4) + " to support the Gazette.", "red"); return; }
+
+    s.money -= cost4;
+    s.unlocked.newspaper = true;
+    s.reputation = clamp(s.reputation + 6, 0, 100);
+
+    log("The Gazette features your business. Advertising unlocked.");
+    setNotice("Unlocked: advertising (Gazette).", "yellow");
+    render();
+    saveGame(true);
+    return;
+  }
+}
+
+/* -------------------------
+   8) RENDERING (UI UPDATE)
+   ------------------------- */
+
+function render(){
+  if(!s) return;
+
+  var role = ROLES[s.roleKey];
+
+  $("role_line").innerHTML = "<b>Role:</b> " + role.name;
+  $("money_line").innerHTML =
+    "<b>Money:</b> " + money(s.money) +
+    " <span class='muted'>(Debt: " + money(s.debt) + ")</span>";
+
+  $("rep_line").innerHTML = "<b>Reputation:</b> " + s.reputation + " / 100";
+
+  // Keep “Business” wording generic since each role differs
+  $("stage_line").innerHTML = "<b>Progress:</b> " + STAGES[s.stage];
+
+  $("income_line").innerHTML =
+    "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second " +
+    "<span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>";
+
+  // Base story
+  var baseStory = "";
+  if(s.seconds < 8){
+    baseStory = role.intro;
+  } else if(s.stage === 0){
+    baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
+  } else if(s.stage === 1){
+    baseStory = "Your name is spreading. Reputation will shape your future here.";
+  } else {
+    baseStory = "You’ve become a real part of the town. Bigger decisions are coming.";
+  }
+
+  // Notice line (yellow/red)
+  var noticeHtml = "";
+  if(notice.text){
+    if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+    else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+    else noticeHtml = notice.text + "<br/><br/>";
+  }
+
+  $("story_line").innerHTML = noticeHtml + baseStory;
+
+  // Show core lines/buttons
+  show("role_line");
+  show("money_line");
+  show("rep_line");
+  show("stage_line");
+  show("income_line");
+  show("story_line");
+  show("serveBtn");
+  show("goodDeedBtn");
+  show("log");
+
+  // Upgrade buttons visibility rules
+  if(s.unlocked.stall) show("upgrade_block");
+  if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn");
+  else hide("upgradeToStallBtn");
+
+  if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn");
+  else hide("upgradeToStoreBtn");
+
+  if(s.stage >= 1) show("hireHelpBtn");
+  else hide("hireHelpBtn");
+
+  if(s.unlocked.newspaper) show("unlockNewsBtn");
+  else hide("unlockNewsBtn");
+
+  if(s.unlocked.newspaper) show("advertiseBtn");
+  else hide("advertiseBtn");
+
+  if(s.unlocked.bank){
+    show("loanBtn");
+    show("repayBtn");
+  } else {
+    hide("loanBtn");
+    hide("repayBtn");
+  }
+
+  // ASCII updates
+  renderAscii();
+  renderTownFeatures();
+
+  renderLog();
+}
+
+/* -------------------------
+   9) START / SAVE / LOAD
+   ------------------------- */
+
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+
+function saveGame(silent){
+  if(!s) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    if(!silent){
+      $("saveStatus").textContent = "Saved.";
+      setTimeout(function(){ $("saveStatus").textContent = ""; }, 1200);
+    }
+  } catch(e){
+    $("saveStatus").textContent = "Save failed (storage blocked).";
+  }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw){
+      alert("No save found on this device.");
+      return;
+    }
+    s = JSON.parse(raw);
+
+    hide("setup_block");
+    setNotice("Loaded save.", "yellow");
+
+    render();
+    log("Loaded save.");
+    startLoop();
+  } catch(e){
+    alert("Load failed.");
+  }
+}
+
+function restartGame(){
+  if(!confirm("Restart game? This clears your save.")) return;
+  localStorage.removeItem(SAVE_KEY);
+  stopLoop();
+  location.reload();
+}
+
+/* -------------------------
+   10) INIT
+   ------------------------- */
+
+(function init(){
+  var raw = localStorage.getItem(SAVE_KEY);
+  if(raw){
+    var ss = $("saveStatus");
+    if(ss) ss.textContent = "Save found on this device.";
+  }
+})();
+You said:
+Uploaded image
+Okay right now all options leaves a blank screen after i hit start game 
+ChatGPT said:
+
+Thought for 22s
+That “blank after Start game” almost always means your JavaScript hit an error right after it hid the setup block — so the page stops updating and you’re left with only the always-visible buttons.
+
+Let’s fix it in a way that makes errors show on the page, and also makes render() not crash if an element ID is missing.
+
+1) First: make sure your index.html RIGHT PANEL has the town feature IDs
+Use this exact right panel (this prevents missing-ID mistakes later):
+
+<div class="panelRight">
+
+  <!-- PLAYER BUSINESS ASCII -->
+  <pre id="ascii_display" class="hidden"></pre>
+  <span id="ascii_caption" class="tiny"></span>
+
+  <hr style="margin:10px 0;" />
+
+  <!-- TOWN FEATURES ASCII -->
+  <div id="town_features" class="hidden">
+    <pre id="ascii_bank" class="hidden"></pre>
+    <pre id="ascii_gazette" class="hidden"></pre>
+  </div>
+
+</div>
+2) Make sure scripts load in this order (bottom of index.html)
+<script src="ascii.js"></script>
+<script src="game.js"></script>
+3) Replace your game.js with this “crash-proof” version
+This version:
+
+won’t die if an element is missing
+
+shows the actual error message in the page (top next to Save)
+
+still uses your same gameplay
+
+Copy/paste this whole thing into game.js:
+
+/* =========================================================
+   TOWN TRADE - game.js (crash-proof)
+   ========================================================= */
+
+var SAVE_KEY = "townTrade_cb_style_v2";
+
+var ROLES = {
+  general_store: {
+    name: "General Store",
+    intro: "You set up shop selling essentials. Flour, cloth, candles… whatever keeps the town alive.",
+    baseIncome: 1.0,
+    serveMoney: 8,
+    serveRep: 2
+  },
+  blacksmith: {
+    name: "Blacksmith",
+    intro: "You start with a small forge corner. Fewer customers, bigger payouts.",
+    baseIncome: 1.0,
+    serveMoney: 10,
+    serveRep: 1
+  },
+  boarding_house: {
+    name: "Boarding House",
+    intro: "You begin by renting a spare room and offering meals. Reputation spreads fast in a small town.",
+    baseIncome: 1.0,
+    serveMoney: 7,
+    serveRep: 3
+  }
+};
+
+var STAGES = ["Stage 1", "Stage 2", "Stage 3"];
+
+var s = null;
+var tickHandle = null;
+var notice = { text: "", type: "" };
+
+// ===== Crash display (so you see what broke) =====
+window.onerror = function (msg, url, line, col) {
+  try {
+    var ss = document.getElementById("saveStatus");
+    if (ss) ss.textContent = "ERROR: " + msg + " (line " + line + ")";
+  } catch (e) {}
+  return false;
+};
+
+// ===== Helpers =====
+function $(id){ return document.getElementById(id); }
+
+function setHTML(id, html){
+  var el = $(id);
+  if(!el) return;
+  el.innerHTML = html;
+}
+
+function setText(id, text){
+  var el = $(id);
+  if(!el) return;
+  el.textContent = text;
+}
+
+function show(id){
+  var el = $(id);
+  if(!el) return;
+  el.className = el.className.replace("hidden", "").trim();
+}
+
+function hide(id){
+  var el = $(id);
+  if(!el) return;
+  if(el.className.indexOf("hidden") === -1) el.className += " hidden";
+}
+
+function money(n){
+  n = Math.floor(n);
+  return "$" + n.toString();
+}
+
+function clamp(n, a, b){
+  if(n < a) return a;
+  if(n > b) return b;
+  return n;
+}
+
+function setNotice(text, type){
+  notice.text = text || "";
+  notice.type = type || "";
+}
+
+function newState(roleKey){
+  return {
+    roleKey: roleKey,
+    money: 50,
+    reputation: 60,
+    stage: 0,
+    debt: 0,
+
+    incomeBonus: 0,
+    repGainBonus: 0,
+    demand: 1.0,
+
+    seconds: 0,
+    served: 0,
+    goodServed: 0,
+    badServed: 0,
+
+    unlocked: {
+      stall: false,
+      storefront: false,
+      newspaper: false,
+      bank: false
+    },
+
+    logLines: []
+  };
+}
+
+function log(msg){
+  if(!s) return;
+  var ts = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  s.logLines.unshift("[" + ts + "] " + msg);
+  if(s.logLines.length > 18) s.logLines.pop();
+  renderLog();
+}
+
+function renderLog(){
+  if(!s) return;
+  setText("log", s.logLines.join("\n"));
+}
+
+function incomePerSecond(){
+  var role = ROLES[s.roleKey];
+  var stageBonus = s.stage * 0.8;
+  return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
+}
+
+// ===== ASCII rendering =====
+function renderAscii(){
+  var artBlock = $("ascii_display");
+  var caption = $("ascii_caption");
+  if(!artBlock || !caption || !s) return;
+
+  var roleSet = (typeof ASCII_ART !== "undefined") ? ASCII_ART[s.roleKey] : null;
+  var art = roleSet ? roleSet[s.stage] : null;
+
+  if(art){
+    artBlock.textContent = art;
+    show("ascii_display");
+  } else {
+    // Don’t crash—just show nothing if missing
+    artBlock.textContent = "";
+    hide("ascii_display");
+  }
+
+  if(s.roleKey === "general_store") caption.textContent = "You grow by keeping steady customers and trust.";
+  else if(s.roleKey === "blacksmith") caption.textContent = "Fewer jobs, heavier rewards. Mistakes cost.";
+  else if(s.roleKey === "boarding_house") caption.textContent = "Guests talk. Reputation matters fast.";
+  else caption.textContent = "";
+}
+
+function renderTownFeatures(){
+  if(!s) return;
+
+  hide("town_features");
+  hide("ascii_bank");
+  hide("ascii_gazette");
+
+  var town = (typeof TOWN_ASCII !== "undefined") ? TOWN_ASCII : null;
+
+  if(s.unlocked.newspaper && town && town.gazette && $("ascii_gazette")){
+    $("ascii_gazette").textContent = town.gazette;
+    show("ascii_gazette");
+    show("town_features");
+  }
+
+  if(s.unlocked.bank && town && town.bank && $("ascii_bank")){
+    $("ascii_bank").textContent = town.bank;
+    show("ascii_bank");
+    show("town_features");
+  }
+}
+
+// ===== Loop =====
+function startLoop(){
+  stopLoop();
+  tickHandle = setInterval(tick, 1000);
+}
+
+function stopLoop(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = null;
+}
+
+function tick(){
+  if(!s) return;
+
+  s.seconds += 1;
+  s.money += incomePerSecond();
+
+  if(s.seconds % 10 === 0){
+    var drift = (s.reputation - 50) / 5000;
+    s.demand = clamp(s.demand + drift, 0.85, 1.20);
+  }
+
+  if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
+    var interest = Math.max(1, Math.floor(s.debt * 0.02));
+    s.debt += interest;
+    log("Bank interest increased your debt by " + money(interest) + ".");
+    if(s.debt >= 350){
+      setNotice("WARNING: Your debt is getting dangerous.", "red");
+    }
+  }
+
+  checkUnlocks();
+
+  if(s.seconds % 15 === 0) saveGame(true);
+
+  render();
+}
+
+// ===== Unlocks =====
+function checkUnlocks(){
+  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+    s.unlocked.stall = true;
+    show("upgrade_block");
+    show("upgradeToStallBtn");
+    log("You spot a better opportunity to expand.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
+  }
+
+  if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+    s.unlocked.storefront = true;
+    show("upgradeToStoreBtn");
+    log("A bigger expansion is possible now.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
+  }
+
+  if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+    s.unlocked.newspaper = true;
+    show("unlockNewsBtn");
+    log("The Town Gazette offers to feature you (for a price).");
+    setNotice("NEW OPTION: Support the Town Gazette (advertising)", "yellow");
+  }
+
+  if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+    s.unlocked.bank = true;
+    show("loanBtn");
+    show("repayBtn");
+    log("The bank clerk offers you a loan. (Be careful.)");
+    setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+  }
+
+  show("serveBtn");
+  show("goodDeedBtn");
+  show("log");
+
+  if(s.unlocked.newspaper) show("advertiseBtn");
+}
+
+// ===== Actions =====
+function serveCustomer(){
+  var role = ROLES[s.roleKey];
+
+  var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
+  var isGood = (Math.random() < goodChance);
+
+  s.served += 1;
+
+  if(isGood){
+    s.goodServed += 1;
+
+    var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
+    s.money += payout;
+
+    var repGain = Math.floor((role.serveRep + s.repGainBonus) * 1.0);
+    s.reputation = clamp(s.reputation + repGain, 0, 100);
+
+    log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+  } else {
+    s.badServed += 1;
+
+    var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
+    s.money = Math.max(0, s.money - loss);
+
+    var repHit = Math.max(1, 4 - Math.floor(s.stage/2));
+    s.reputation = clamp(s.reputation - repHit, 0, 100);
+
+    log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+    setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
+  }
+
+  render();
+  saveGame(true);
+}
+
+function doGoodDeed(){
+  var cost = 12 + (s.stage*4);
+  if(s.money < cost){
+    log("You want to help, but you don't have enough cash right now.");
+    setNotice("Not enough money for that right now.", "red");
+    return;
+  }
+
+  s.money -= cost;
+
+  var rep = 4 + Math.floor(s.stage/2);
+  s.reputation = clamp(s.reputation + rep, 0, 100);
+
+  log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+  setNotice("Good deed completed: reputation increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function advertise(){
+  var cost = 30 + (s.stage*10);
+  if(s.money < cost){
+    log("Advertising costs money. You don't have enough.");
+    setNotice("Not enough money to advertise.", "red");
+    return;
+  }
+
+  s.money -= cost;
+  s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
+
+  log("You ran an advertisement in the Gazette. Demand increased a bit.");
+  setNotice("Advertising worked: demand increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function takeLoan(){
+  if(!s.unlocked.bank){
+    log("No bank available yet.");
+    return;
+  }
+
+  var amount = 120;
+  s.money += amount;
+  s.debt += amount;
+
+  log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+  setNotice("Loan taken: remember debt grows with interest.", "red");
+  render();
+  saveGame(true);
+}
+
+function repayLoan(){
+  if(s.debt <= 0){
+    log("You have no debt.");
+    setNotice("No debt to repay.", "yellow");
+    return;
+  }
+
+  var pay = Math.min(80, s.debt);
+  if(s.money < pay){
+    log("You don't have enough money to repay right now.");
+    setNotice("Not enough money to repay debt.", "red");
+    return;
+  }
+
+  s.money -= pay;
+  s.debt -= pay;
+
+  log("You repaid " + money(pay) + " of your debt.");
+  setNotice("Debt reduced. Nice.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function buyUpgrade(which){
+  if(which === "stall"){
+    var cost = 120;
+    if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); return; }
+    if(s.stage >= 1){ log("You already upgraded."); return; }
+
+    s.money -= cost;
+    s.stage = 1;
+    s.incomeBonus += 1;
+
+    log("Upgrade complete: Stage 1 → Stage 2.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "storefront"){
+    var cost2 = 480;
+    if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); return; }
+    if(s.stage >= 2){ log("You already have the top upgrade."); return; }
+    if(s.stage < 1){ log("You need the first upgrade first."); return; }
+
+    s.money -= cost2;
+    s.stage = 2;
+    s.incomeBonus += 3;
+
+    log("Upgrade complete: Stage 2 → Stage 3.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "helper"){
+    var cost3 = 260;
+    if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); return; }
+
+    s.money -= cost3;
+    s.incomeBonus += 2;
+    s.repGainBonus += 1;
+
+    log("You hired steady help.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "newspaper"){
+    var cost4 = 200;
+    if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); return; }
+
+    s.money -= cost4;
+    s.unlocked.newspaper = true;
+    s.reputation = clamp(s.reputation + 6, 0, 100);
+
+    log("The Gazette features your business. Advertising unlocked.");
+    setNotice("Unlocked: advertising.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+}
+
+// ===== Render =====
+function render(){
+  if(!s) return;
+
+  var role = ROLES[s.roleKey];
+
+  setHTML("role_line", "<b>Role:</b> " + role.name);
+  setHTML("money_line", "<b>Money:</b> " + money(s.money) + " <span class='muted'>(Debt: " + money(s.debt) + ")</span>");
+  setHTML("rep_line", "<b>Reputation:</b> " + s.reputation + " / 100");
+  setHTML("stage_line", "<b>Progress:</b> " + STAGES[s.stage]);
+  setHTML("income_line", "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second <span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>");
+
+  var baseStory = "";
+  if(s.seconds < 8) baseStory = role.intro;
+  else if(s.stage === 0) baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
+  else if(s.stage === 1) baseStory = "Your name is spreading. Reputation will shape your future here.";
+  else baseStory = "You’ve become a real part of the town. Bigger decisions are coming.";
+
+  var noticeHtml = "";
+  if(notice.text){
+    if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+    else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+    else noticeHtml = notice.text + "<br/><br/>";
+  }
+  setHTML("story_line", noticeHtml + baseStory);
+
+  show("role_line");
+  show("money_line");
+  show("rep_line");
+  show("stage_line");
+  show("income_line");
+  show("story_line");
+  show("serveBtn");
+  show("goodDeedBtn");
+  show("log");
+
+  if(s.unlocked.stall) show("upgrade_block");
+  if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn"); else hide("upgradeToStallBtn");
+  if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn"); else hide("upgradeToStoreBtn");
+  if(s.stage >= 1) show("hireHelpBtn"); else hide("hireHelpBtn");
+  if(s.unlocked.newspaper) show("unlockNewsBtn"); else hide("unlockNewsBtn");
+
+  if(s.unlocked.newspaper) show("advertiseBtn"); else hide("advertiseBtn");
+  if(s.unlocked.bank){ show("loanBtn"); show("repayBtn"); } else { hide("loanBtn"); hide("repayBtn"); }
+
+  renderAscii();
+  renderTownFeatures();
+  renderLog();
+}
+
+// ===== Start / Save / Load =====
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+
+function saveGame(silent){
+  if(!s) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    if(!silent){
+      setText("saveStatus", "Saved.");
+      setTimeout(function(){ setText("saveStatus", ""); }, 1200);
+    }
+  } catch(e){
+    setText("saveStatus", "Save failed (storage blocked).");
+  }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw){ alert("No save found on this device."); return; }
+    s = JSON.parse(raw);
+
+    hide("setup_block");
+    setNotice("Loaded save.", "yellow");
+
+    render();
+    log("Loaded save.");
+    startLoop();
+  } catch(e){
+    alert("Load failed.");
+  }
+}
+
+function restartGame(){
+  if(!confirm("Restart game? This clears your save.")) return;
+  localStorage.removeItem(SAVE_KEY);
+  stopLoop();
+  location.reload();
+}
+
+(function init(){
+  var raw = localStorage.getItem(SAVE_KEY);
+  if(raw) setText("saveStatus", "Save found on this device.");
+})();
+What to do right now
+Update your right panel HTML to include the town feature IDs
+
+Replace game.js with the crash-proof version above
+
+Reload and hit Start game
+
+If it still blanks:
+Look at the top next to “Save” — it will now show something like:
+ERROR: Cannot read properties of null (line 123)
+…and paste that error here. That message will tell us exactly what ID is missing.
+
+You said:
+and please give me an updated style.css
+ChatGPT said:
+Here’s an updated styles.css that matches your current layout (left panel content + right panel ASCII + town features). It also fixes the “everything stuck in the top-left” look by giving the wrapper a width and spacing.
+
+Copy/paste this whole file:
+
 /* =========================================================
    GLOBAL PAGE STYLE
    ========================================================= */
@@ -132,3 +3807,2167 @@ pre {
 .dark_link { color: orange; }
 .dark_link:visited { color: chocolate; }
 .dark_table { border-color: #F1F1F1; }
+Quick notes (so you can tweak it easily)
+Want everything bigger? Change #tab_town_trade width: 920px; to like 1100px.
+
+Want ASCII panel tighter? Change .panelRight width: 420px;.
+
+Want it more “old school”? Increase pre { font-size: 14px; }.
+
+If your screen is still blank after “Start game”, tell me what the error text says next to Save (the crash-proof game.js should show it).
+
+You said:
+It is still blank
+ChatGPT said:
+Good — thanks for sticking with this. We’re going to stop guessing and pinpoint the exact cause.
+A totally blank screen after Start game means JavaScript is throwing an error before render() finishes.
+
+We will fix this in 3 very controlled steps.
+
+STEP 1 — Verify JavaScript is actually running at all
+Do this FIRST (very important)
+Open your game in the browser
+
+Right-click → Inspect
+
+Click the Console tab
+
+Now refresh the page.
+
+Tell me:
+Do you see any red error messages?
+
+Or does the console say nothing?
+
+👉 If you see any red text, copy it exactly and paste it here.
+That alone will solve this.
+
+STEP 2 — Guaranteed on-screen error output (no console needed)
+Add this ONE LINE to the very top of game.js (first line):
+
+alert("game.js loaded");
+Reload the page
+If you DO NOT see an alert → game.js is not loading
+
+If you DO see it → JS is loading and failing later
+
+👉 Tell me which happens.
+
+STEP 3 — The most common cause (and almost certainly yours)
+❌ Your ascii.js is missing or broken
+If ASCII_ART does not exist, this line crashes silently in older browsers:
+
+var roleSet = ASCII_ART[s.roleKey];
+TEMPORARY FIX (guaranteed to un-blank the screen)
+Replace this entire function in game.js:
+
+function renderAscii(){
+  var artBlock = $("ascii_display");
+  var caption = $("ascii_caption");
+  if(!artBlock || !caption || !s) return;
+
+  var roleSet = (typeof ASCII_ART !== "undefined") ? ASCII_ART[s.roleKey] : null;
+  var art = roleSet ? roleSet[s.stage] : null;
+
+  if(art){
+    artBlock.textContent = art;
+    show("ascii_display");
+  } else {
+    artBlock.textContent = "(no ascii yet)";
+    show("ascii_display");
+  }
+
+  caption.textContent = s.roleKey.replace("_"," ");
+}
+This version cannot crash even if ascii.js is missing.
+
+Reload and press Start Game.
+
+Result should be:
+Text stats appear
+
+(no ascii yet) appears on the right
+
+Buttons show up
+
+👉 Tell me if this works.
+
+STEP 4 — Also verify your HTML IDs exist (critical)
+Your index.html MUST contain these IDs exactly:
+
+<span id="role_line"></span>
+<span id="money_line"></span>
+<span id="rep_line"></span>
+<span id="stage_line"></span>
+<span id="income_line"></span>
+<span id="story_line"></span>
+
+<pre id="ascii_display"></pre>
+<span id="ascii_caption"></span>
+
+<pre id="log"></pre>
+If any one of these is missing, render() will stop.
+
+What I strongly suspect (90% confidence)
+One of these is true:
+
+ascii.js is not loading
+
+ascii.js has a syntax error (bad backticks or slashes)
+
+ASCII_ART is undefined
+
+A required HTML ID is missing
+
+Browser cached an old file
+
+We will know for sure once you answer these:
+
+Please reply with:
+1️⃣ Do you see any console errors? (copy them)
+2️⃣ Did the alert("game.js loaded") appear?
+3️⃣ Did replacing renderAscii() fix the blank screen?
+
+Once you answer those, I’ll give you the exact final fix, not guesses.
+
+You said:
+Uploaded image
+ChatGPT said:
+
+Thought for 10s
+Perfect — that console error tells us exactly what’s wrong:
+
+Cannot read properties of null (reading 'className') at show()
+Meaning: your code is calling show("someId") but there is no element in your HTML with that id, so document.getElementById(...) returns null, and then .className crashes the whole game.
+
+That’s why it goes blank right after you click Start game.
+
+The first error about “listener indicated an asynchronous response” is usually a browser extension and can be ignored. The real problem is the show() crash.
+
+✅ Fix (fastest): Make show() / hide() crash-proof + print missing IDs
+Open your game.js and replace your show() and hide() functions with these:
+
+function show(id){
+  var el = document.getElementById(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return; // prevents blank-screen crash
+  }
+  el.className = el.className.replace("hidden", "").trim();
+}
+
+function hide(id){
+  var el = document.getElementById(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return;
+  }
+  if(el.className.indexOf("hidden") === -1) el.className += " hidden";
+}
+What this does:
+The game will NOT crash anymore
+
+The console will tell you exactly which id is missing, like:
+Missing element id: ascii_bank
+
+✅ Next: Reload → Click Start Game → Check console warnings
+After you do the change above:
+
+Refresh
+
+Click Start game
+
+Look in the Console for warnings that say:
+“Missing element id: ____”
+
+Those missing IDs are what you need to add to your index.html.
+
+✅ Most common missing IDs for your current setup
+Make sure your index.html has all of these IDs (spelled exactly):
+
+Right panel
+<pre id="ascii_display" class="hidden"></pre>
+<span id="ascii_caption" class="tiny"></span>
+
+<div id="town_features" class="hidden">
+  <pre id="ascii_bank" class="hidden"></pre>
+  <pre id="ascii_gazette" class="hidden"></pre>
+</div>
+Left panel
+<span id="role_line" class="hidden"></span>
+<span id="money_line" class="hidden"></span>
+<span id="rep_line" class="hidden"></span>
+<span id="stage_line" class="hidden"></span>
+<span id="income_line" class="hidden"></span>
+<span id="story_line" class="hidden"></span>
+
+<button id="serveBtn" class="home_button hidden"></button>
+<button id="goodDeedBtn" class="home_button hidden"></button>
+<button id="advertiseBtn" class="home_button hidden"></button>
+<button id="loanBtn" class="home_button hidden"></button>
+<button id="repayBtn" class="home_button hidden"></button>
+
+<span id="upgrade_block" class="hidden"></span>
+<button id="upgradeToStallBtn" class="home_button upgrade_button hidden"></button>
+<button id="upgradeToStoreBtn" class="home_button upgrade_button hidden"></button>
+<button id="hireHelpBtn" class="home_button upgrade_button hidden"></button>
+<button id="unlockNewsBtn" class="home_button upgrade_button hidden"></button>
+
+<pre id="log" class="hidden"></pre>
+Quick check: you’re probably on an older game.js
+Your screenshot shows show() is still crashing, which means your current show() function does not have the null check. The patch above fixes that immediately.
+
+Do this now:
+Replace show() / hide() with the safe versions, reload, click Start Game, and paste the console warnings (the “Missing element id: …” lines).
+Once I see those IDs, I’ll tell you exactly what to add/remove in index.html so it’s fully clean and working.
+
+You said:
+redo my whole index file : <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Town Trade !</title>
+  <meta http-equiv="Cache-control" content="no-cache" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- =========================================================
+       MAIN GAME WRAPPER
+       Everything in the game lives inside this one div.
+       ========================================================= -->
+  <div id="tab_town_trade">
+
+    <!-- =========================================================
+         RIGHT PANEL
+         ASCII art gets injected here (from ascii.js via game.js)
+         ========================================================= -->
+   <div class="panelRight">
+
+  <!-- PLAYER BUSINESS ASCII -->
+  <pre id="ascii_display" class="hidden"></pre>
+  <span id="ascii_caption" class="tiny"></span>
+
+  <hr style="margin:10px 0;" />
+
+  <!-- TOWN FEATURES ASCII -->
+  <div id="town_features" class="hidden">
+    <pre id="ascii_bank" class="hidden"></pre>
+    <pre id="ascii_gazette" class="hidden"></pre>
+  </div>
+
+</div>
+
+    <!-- =========================================================
+         LEFT PANEL
+         Buttons, stats, story text, upgrades, and the log
+         ========================================================= -->
+    <div class="panelLeft">
+
+      <!-- Save/Load/Restart -->
+      <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
+      <span id="saveStatus" class="tiny"></span><br/>
+
+      <button class="home_button" id="loadButton" onclick="loadGame();" style="visibility:visible">Load</button>
+      <button class="home_button" id="restartButton" onclick="restartGame();" style="visibility:visible">Restart Game</button>
+      <br/><br/>
+
+      <!-- Start setup block -->
+      <span id="setup_block">
+        <b>Pick a role to begin:</b><br/>
+        <select id="roleSelect">
+          <option value="general_store">General Store</option>
+          <option value="blacksmith">Blacksmith</option>
+          <option value="boarding_house">Boarding House</option>
+        </select>
+
+        <button class="home_button" onclick="startGame();">Start game</button><br/>
+        <span class="tiny muted">Inspired by Candy Box &amp; Candy Box 2</span>
+        <br/><br/>
+      </span>
+
+      <!-- Main stat lines -->
+      <span id="role_line" class="hidden"></span><br/>
+      <span id="money_line" class="hidden"></span><br/>
+      <span id="rep_line" class="hidden"></span><br/>
+      <span id="stage_line" class="hidden"></span><br/>
+      <span id="income_line" class="hidden"></span><br/><br/>
+
+      <!-- Story line -->
+      <span id="story_line" class="hidden"></span><br/><br/>
+
+      <!-- Action buttons -->
+      <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
+      <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Help a customer (reputation)</button><br/>
+      <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
+      <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
+      <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
+      <br/>
+
+      <!-- Upgrades -->
+      <span id="upgrade_block" class="hidden">
+        <b><span class="notice-yellow">Upgrades:</span></b><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+        <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+        <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+        <br/>
+      </span>
+
+      <!-- Log -->
+      <pre id="log" class="hidden"></pre>
+
+    </div>
+
+    <br class="clear" />
+  </div>
+
+  <!-- IMPORTANT: ASCII file must load BEFORE game.js -->
+<script src="ascii.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>
+ChatGPT said:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Town Trade !</title>
+  <meta http-equiv="Cache-control" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- =========================================================
+       MAIN GAME WRAPPER
+       Everything in the game lives inside this one div.
+       ========================================================= -->
+  <div id="tab_town_trade">
+
+    <!-- =========================================================
+         RIGHT PANEL
+         Shows ASCII art (business + town features)
+         ========================================================= -->
+    <div class="panelRight">
+
+      <!-- PLAYER BUSINESS ASCII -->
+      <pre id="ascii_display" class="hidden"></pre>
+      <span id="ascii_caption" class="tiny"></span>
+
+      <hr style="margin:10px 0;" />
+
+      <!-- TOWN FEATURES ASCII (Gazette + Bank) -->
+      <div id="town_features" class="hidden">
+        <pre id="ascii_gazette" class="hidden"></pre>
+        <pre id="ascii_bank" class="hidden"></pre>
+      </div>
+
+    </div>
+
+    <!-- =========================================================
+         LEFT PANEL
+         Buttons, stats, story text, upgrades, and the log
+         ========================================================= -->
+    <div class="panelLeft">
+
+      <!-- Save/Load/Restart -->
+      <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
+      <span id="saveStatus" class="tiny"></span><br/>
+
+      <button class="home_button" id="loadButton" onclick="loadGame();" style="visibility:visible">Load</button>
+      <button class="home_button" id="restartButton" onclick="restartGame();" style="visibility:visible">Restart Game</button>
+      <br/><br/>
+
+      <!-- Start setup block -->
+      <span id="setup_block">
+        <b>Pick a role to begin:</b><br/>
+        <select id="roleSelect">
+          <option value="general_store">General Store</option>
+          <option value="blacksmith">Blacksmith</option>
+          <option value="boarding_house">Boarding House</option>
+        </select>
+
+        <button class="home_button" onclick="startGame();">Start game</button><br/>
+        <span class="tiny muted">Inspired by Candy Box &amp; Candy Box 2</span>
+        <br/><br/>
+      </span>
+
+      <!-- Main stat lines -->
+      <span id="role_line" class="hidden"></span><br/>
+      <span id="money_line" class="hidden"></span><br/>
+      <span id="rep_line" class="hidden"></span><br/>
+      <span id="stage_line" class="hidden"></span><br/>
+      <span id="income_line" class="hidden"></span><br/><br/>
+
+      <!-- Story line -->
+      <span id="story_line" class="hidden"></span><br/><br/>
+
+      <!-- Action buttons -->
+      <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
+      <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Help a customer (reputation)</button><br/>
+      <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
+      <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
+      <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
+      <br/>
+
+      <!-- Upgrades -->
+      <span id="upgrade_block" class="hidden">
+        <b><span class="notice-yellow">Upgrades:</span></b><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+        <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+        <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+        <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+        <br/>
+      </span>
+
+      <!-- Log -->
+      <pre id="log" class="hidden"></pre>
+
+    </div>
+
+    <br class="clear" />
+  </div>
+
+  <!-- IMPORTANT: ASCII file must load BEFORE game.js -->
+  <script src="ascii.js"></script>
+  <script src="game.js"></script>
+
+</body>
+</html>
+You said:
+Uploaded image
+The bottom buttons should not be up the whole time. Run a small ad should come up even later, so should loan and debt
+ChatGPT said:
+Got it — right now those buttons are showing because your checkUnlocks() is calling show() on them too early.
+
+What you want (simple rules)
+Serve + Help: show right after Start
+
+Run a small advertisement: only after the Gazette is unlocked (and/or you “support” it)
+
+Loan + Repay: only after the Bank is unlocked
+
+Also: hide everything at game start so nothing “leaks” onto the screen
+
+✅ Fix: Update startGame() + checkUnlocks() in game.js
+1) Add this helper function (put near your other helpers)
+function hideAllActionButtons(){
+  hide("serveBtn");
+  hide("goodDeedBtn");
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+}
+2) Update startGame() so it hides everything first, then only shows the first two
+Find startGame() and make it look like this:
+
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+
+  // Hide everything first (prevents buttons appearing too early)
+  hideAllActionButtons();
+  hide("upgrade_block");
+  hide("upgradeToStallBtn");
+  hide("upgradeToStoreBtn");
+  hide("hireHelpBtn");
+  hide("unlockNewsBtn");
+
+  // Only these two should appear immediately
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+3) Replace your checkUnlocks() with this version
+This version only shows buttons when unlocked:
+
+function checkUnlocks(){
+  // ALWAYS available after game start
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  // --- Stall upgrade becomes available ---
+  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+    s.unlocked.stall = true;
+    show("upgrade_block");
+    show("upgradeToStallBtn");
+    log("You spot a better opportunity to expand.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
+  }
+
+  // --- Storefront upgrade becomes available ---
+  if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+    s.unlocked.storefront = true;
+    show("upgrade_block");
+    show("upgradeToStoreBtn");
+    log("A bigger expansion is possible now.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
+  }
+
+  // --- Gazette unlock (button appears, but ads still not active until bought) ---
+  if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+    s.unlocked.newspaper = true;
+    show("upgrade_block");
+    show("unlockNewsBtn");
+    log("The Town Gazette offers to feature you (for a price).");
+    setNotice("NEW OPTION: Support the Town Gazette", "yellow");
+  }
+
+  // --- Bank unlock ---
+  if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+    s.unlocked.bank = true;
+    log("The bank clerk offers you a loan. (Be careful.)");
+    setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+  }
+
+  // --- Show Advertise ONLY after Gazette is supported (your buyUpgrade('newspaper') does that) ---
+  if(s.unlocked.newspaper){
+    // Only show the "Support Gazette" button until purchased
+    show("unlockNewsBtn");
+  } else {
+    hide("unlockNewsBtn");
+  }
+
+  // The actual advertise button should only show AFTER you pay for newspaper support.
+  // We can use a separate flag for that:
+  if(s.unlocked.newspaper && s.gazetteSupported){
+    show("advertiseBtn");
+  } else {
+    hide("advertiseBtn");
+  }
+
+  // --- Loan/Repay ONLY after bank unlocked ---
+  if(s.unlocked.bank){
+    show("loanBtn");
+    show("repayBtn");
+  } else {
+    hide("loanBtn");
+    hide("repayBtn");
+  }
+
+  // Log should be visible once the game starts
+  show("log");
+}
+4) Add one tiny flag for “gazetteSupported”
+In newState() add this line anywhere inside the object:
+
+gazetteSupported: false,
+5) Set that flag when you buy the Gazette support
+Inside buyUpgrade('newspaper'), add this line:
+
+s.gazetteSupported = true;
+So that block becomes:
+
+if(which === "newspaper"){
+  var cost4 = 200;
+  if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); return; }
+
+  s.money -= cost4;
+  s.unlocked.newspaper = true;
+  s.gazetteSupported = true; // ✅ THIS enables "Run a small advertisement"
+  s.reputation = clamp(s.reputation + 6, 0, 100);
+
+  log("The Gazette features your business. Advertising unlocked.");
+  setNotice("Unlocked: advertising.", "yellow");
+  render(); saveGame(true);
+  return;
+}
+✅ What this will look like now
+Start game → only Serve + Help
+
+Later → Support the Gazette button appears
+
+After you pay for it → Run a small advertisement appears
+
+Later → Loan and Repay appear only after Bank unlock
+
+If you paste your current checkUnlocks() and buyUpgrade() here, I can merge these changes into your exact file so you don’t have to hunt lines.
+
+You said:
+give me a full code with those changes, i did nost of them : var SAVE_KEY = "townTrade_cb_style_v2";
+
+var ROLES = {
+  general_store: {
+    name: "General Store",
+    intro: "You set up shop selling essentials. Flour, cloth, candles… whatever keeps the town alive.",
+    baseIncome: 1.0,
+    serveMoney: 8,
+    serveRep: 2
+  },
+  blacksmith: {
+    name: "Blacksmith",
+    intro: "You start with a small forge corner. Fewer customers, bigger payouts.",
+    baseIncome: 1.0,
+    serveMoney: 10,
+    serveRep: 1
+  },
+  boarding_house: {
+    name: "Boarding House",
+    intro: "You begin by renting a spare room and offering meals. Reputation spreads fast in a small town.",
+    baseIncome: 1.0,
+    serveMoney: 7,
+    serveRep: 3
+  }
+};
+
+var STAGES = ["Stage 1", "Stage 2", "Stage 3"];
+
+var s = null;
+var tickHandle = null;
+var notice = { text: "", type: "" };
+
+// ===== Crash display (so you see what broke) =====
+window.onerror = function (msg, url, line, col) {
+  try {
+    var ss = document.getElementById("saveStatus");
+    if (ss) ss.textContent = "ERROR: " + msg + " (line " + line + ")";
+  } catch (e) {}
+  return false;
+};
+
+// ===== Helpers =====
+function $(id){ return document.getElementById(id); }
+
+function setHTML(id, html){
+  var el = $(id);
+  if(!el) return;
+  el.innerHTML = html;
+}
+
+function setText(id, text){
+  var el = $(id);
+  if(!el) return;
+  el.textContent = text;
+}
+
+function show(id){
+  var el = document.getElementById(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return; // prevents blank-screen crash
+  }
+  el.className = el.className.replace("hidden", "").trim();
+}
+
+function hide(id){
+  var el = document.getElementById(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return;
+  }
+  if(el.className.indexOf("hidden") === -1) el.className += " hidden";
+}
+
+function money(n){
+  n = Math.floor(n);
+  return "$" + n.toString();
+}
+
+function clamp(n, a, b){
+  if(n < a) return a;
+  if(n > b) return b;
+  return n;
+}
+
+function setNotice(text, type){
+  notice.text = text || "";
+  notice.type = type || "";
+}
+
+function newState(roleKey){
+  return {
+    roleKey: roleKey,
+    money: 50,
+    reputation: 60,
+    stage: 0,
+    debt: 0,
+
+    incomeBonus: 0,
+    repGainBonus: 0,
+    demand: 1.0,
+
+    seconds: 0,
+    served: 0,
+    goodServed: 0,
+    badServed: 0,
+
+    unlocked: {
+      gazetteSupported: false,
+      stall: false,
+      storefront: false,
+      newspaper: false,
+      bank: false
+    },
+
+    logLines: []
+  };
+}
+
+function log(msg){
+  if(!s) return;
+  var ts = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  s.logLines.unshift("[" + ts + "] " + msg);
+  if(s.logLines.length > 18) s.logLines.pop();
+  renderLog();
+}
+
+function renderLog(){
+  if(!s) return;
+  setText("log", s.logLines.join("\n"));
+}
+
+function incomePerSecond(){
+  var role = ROLES[s.roleKey];
+  var stageBonus = s.stage * 0.8;
+  return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
+}
+
+function hideAllActionButtons(){
+  hide("serveBtn");
+  hide("goodDeedBtn");
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+}
+
+// ===== ASCII rendering =====
+function renderAscii(){
+  var artBlock = $("ascii_display");
+  var caption = $("ascii_caption");
+  if(!artBlock || !caption || !s) return;
+
+  var roleSet = (typeof ASCII_ART !== "undefined") ? ASCII_ART[s.roleKey] : null;
+  var art = roleSet ? roleSet[s.stage] : null;
+
+  if(art){
+    artBlock.textContent = art;
+    show("ascii_display");
+  } else {
+    // Don’t crash—just show nothing if missing
+    artBlock.textContent = "";
+    hide("ascii_display");
+  }
+
+  if(s.roleKey === "general_store") caption.textContent = "You grow by keeping steady customers and trust.";
+  else if(s.roleKey === "blacksmith") caption.textContent = "Fewer jobs, heavier rewards. Mistakes cost.";
+  else if(s.roleKey === "boarding_house") caption.textContent = "Guests talk. Reputation matters fast.";
+  else caption.textContent = "";
+}
+
+function renderTownFeatures(){
+  if(!s) return;
+
+  hide("town_features");
+  hide("ascii_bank");
+  hide("ascii_gazette");
+
+  var town = (typeof TOWN_ASCII !== "undefined") ? TOWN_ASCII : null;
+
+  if(s.unlocked.newspaper && town && town.gazette && $("ascii_gazette")){
+    $("ascii_gazette").textContent = town.gazette;
+    show("ascii_gazette");
+    show("town_features");
+  }
+
+  if(s.unlocked.bank && town && town.bank && $("ascii_bank")){
+    $("ascii_bank").textContent = town.bank;
+    show("ascii_bank");
+    show("town_features");
+  }
+}
+
+// ===== Loop =====
+function startLoop(){
+  stopLoop();
+  tickHandle = setInterval(tick, 1000);
+}
+
+function stopLoop(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = null;
+}
+
+function tick(){
+  if(!s) return;
+
+  s.seconds += 1;
+  s.money += incomePerSecond();
+
+  if(s.seconds % 10 === 0){
+    var drift = (s.reputation - 50) / 5000;
+    s.demand = clamp(s.demand + drift, 0.85, 1.20);
+  }
+
+  if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
+    var interest = Math.max(1, Math.floor(s.debt * 0.02));
+    s.debt += interest;
+    log("Bank interest increased your debt by " + money(interest) + ".");
+    if(s.debt >= 350){
+      setNotice("WARNING: Your debt is getting dangerous.", "red");
+    }
+  }
+
+  checkUnlocks();
+
+  if(s.seconds % 15 === 0) saveGame(true);
+
+  render();
+}
+
+// ===== Unlocks =====
+function checkUnlocks(){
+  // ALWAYS available after game start
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  // --- Stall upgrade becomes available ---
+  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+    s.unlocked.stall = true;
+    show("upgrade_block");
+    show("upgradeToStallBtn");
+    log("You spot a better opportunity to expand.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
+  }
+
+  // --- Storefront upgrade becomes available ---
+  if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+    s.unlocked.storefront = true;
+    show("upgrade_block");
+    show("upgradeToStoreBtn");
+    log("A bigger expansion is possible now.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
+  }
+
+  // --- Gazette unlock (button appears, but ads still not active until bought) ---
+  if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+    s.unlocked.newspaper = true;
+    show("upgrade_block");
+    show("unlockNewsBtn");
+    log("The Town Gazette offers to feature you (for a price).");
+    setNotice("NEW OPTION: Support the Town Gazette", "yellow");
+  }
+
+  // --- Bank unlock ---
+  if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+    s.unlocked.bank = true;
+    log("The bank clerk offers you a loan. (Be careful.)");
+    setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+  }
+
+  // --- Show Advertise ONLY after Gazette is supported (your buyUpgrade('newspaper') does that) ---
+  if(s.unlocked.newspaper){
+    // Only show the "Support Gazette" button until purchased
+    show("unlockNewsBtn");
+  } else {
+    hide("unlockNewsBtn");
+  }
+
+  // The actual advertise button should only show AFTER you pay for newspaper support.
+  // We can use a separate flag for that:
+  if(s.unlocked.newspaper && s.gazetteSupported){
+    show("advertiseBtn");
+  } else {
+    hide("advertiseBtn");
+  }
+
+  // --- Loan/Repay ONLY after bank unlocked ---
+  if(s.unlocked.bank){
+    show("loanBtn");
+    show("repayBtn");
+  } else {
+    hide("loanBtn");
+    hide("repayBtn");
+  }
+
+  // Log should be visible once the game starts
+  show("log");
+}
+
+// ===== Actions =====
+function serveCustomer(){
+  var role = ROLES[s.roleKey];
+
+  var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
+  var isGood = (Math.random() < goodChance);
+
+  s.served += 1;
+
+  if(isGood){
+    s.goodServed += 1;
+
+    var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
+    s.money += payout;
+
+    var repGain = Math.floor((role.serveRep + s.repGainBonus) * 1.0);
+    s.reputation = clamp(s.reputation + repGain, 0, 100);
+
+    log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+  } else {
+    s.badServed += 1;
+
+    var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
+    s.money = Math.max(0, s.money - loss);
+
+    var repHit = Math.max(1, 4 - Math.floor(s.stage/2));
+    s.reputation = clamp(s.reputation - repHit, 0, 100);
+
+    log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+    setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
+  }
+
+  render();
+  saveGame(true);
+}
+
+function doGoodDeed(){
+  var cost = 12 + (s.stage*4);
+  if(s.money < cost){
+    log("You want to help, but you don't have enough cash right now.");
+    setNotice("Not enough money for that right now.", "red");
+    return;
+  }
+
+  s.money -= cost;
+
+  var rep = 4 + Math.floor(s.stage/2);
+  s.reputation = clamp(s.reputation + rep, 0, 100);
+
+  log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+  setNotice("Good deed completed: reputation increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function advertise(){
+  var cost = 30 + (s.stage*10);
+  if(s.money < cost){
+    log("Advertising costs money. You don't have enough.");
+    setNotice("Not enough money to advertise.", "red");
+    return;
+  }
+
+  s.money -= cost;
+  s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
+
+  log("You ran an advertisement in the Gazette. Demand increased a bit.");
+  setNotice("Advertising worked: demand increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function takeLoan(){
+  if(!s.unlocked.bank){
+    log("No bank available yet.");
+    return;
+  }
+
+  var amount = 120;
+  s.money += amount;
+  s.debt += amount;
+
+  log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+  setNotice("Loan taken: remember debt grows with interest.", "red");
+  render();
+  saveGame(true);
+}
+
+function repayLoan(){
+  if(s.debt <= 0){
+    log("You have no debt.");
+    setNotice("No debt to repay.", "yellow");
+    return;
+  }
+
+  var pay = Math.min(80, s.debt);
+  if(s.money < pay){
+    log("You don't have enough money to repay right now.");
+    setNotice("Not enough money to repay debt.", "red");
+    return;
+  }
+
+  s.money -= pay;
+  s.debt -= pay;
+
+  log("You repaid " + money(pay) + " of your debt.");
+  setNotice("Debt reduced. Nice.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function buyUpgrade(which){
+  if(which === "stall"){
+    var cost = 120;
+    if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); return; }
+    if(s.stage >= 1){ log("You already upgraded."); return; }
+
+    s.money -= cost;
+    s.stage = 1;
+    s.incomeBonus += 1;
+
+    log("Upgrade complete: Stage 1 → Stage 2.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "storefront"){
+    var cost2 = 480;
+    if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); return; }
+    if(s.stage >= 2){ log("You already have the top upgrade."); return; }
+    if(s.stage < 1){ log("You need the first upgrade first."); return; }
+
+    s.money -= cost2;
+    s.stage = 2;
+    s.incomeBonus += 3;
+
+    log("Upgrade complete: Stage 2 → Stage 3.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "helper"){
+    var cost3 = 260;
+    if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); return; }
+
+    s.money -= cost3;
+    s.incomeBonus += 2;
+    s.repGainBonus += 1;
+
+    log("You hired steady help.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "newspaper"){
+    var cost4 = 200;
+    if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); return; }
+
+    s.money -= cost4;
+    s.unlocked.newspaper = true;
+    s.reputation = clamp(s.reputation + 6, 0, 100);
+
+    log("The Gazette features your business. Advertising unlocked.");
+    setNotice("Unlocked: advertising.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+}
+
+// ===== Render =====
+function render(){
+  if(!s) return;
+
+  var role = ROLES[s.roleKey];
+
+  setHTML("role_line", "<b>Role:</b> " + role.name);
+  setHTML("money_line", "<b>Money:</b> " + money(s.money) + " <span class='muted'>(Debt: " + money(s.debt) + ")</span>");
+  setHTML("rep_line", "<b>Reputation:</b> " + s.reputation + " / 100");
+  setHTML("stage_line", "<b>Progress:</b> " + STAGES[s.stage]);
+  setHTML("income_line", "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second <span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>");
+
+  var baseStory = "";
+  if(s.seconds < 8) baseStory = role.intro;
+  else if(s.stage === 0) baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
+  else if(s.stage === 1) baseStory = "Your name is spreading. Reputation will shape your future here.";
+  else baseStory = "You’ve become a real part of the town. Bigger decisions are coming.";
+
+  var noticeHtml = "";
+  if(notice.text){
+    if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+    else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+    else noticeHtml = notice.text + "<br/><br/>";
+  }
+  setHTML("story_line", noticeHtml + baseStory);
+
+  show("role_line");
+  show("money_line");
+  show("rep_line");
+  show("stage_line");
+  show("income_line");
+  show("story_line");
+  show("serveBtn");
+  show("goodDeedBtn");
+  show("log");
+
+  if(s.unlocked.stall) show("upgrade_block");
+  if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn"); else hide("upgradeToStallBtn");
+  if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn"); else hide("upgradeToStoreBtn");
+  if(s.stage >= 1) show("hireHelpBtn"); else hide("hireHelpBtn");
+  if(s.unlocked.newspaper) show("unlockNewsBtn"); else hide("unlockNewsBtn");
+
+  if(s.unlocked.newspaper) show("advertiseBtn"); else hide("advertiseBtn");
+  if(s.unlocked.bank){ show("loanBtn"); show("repayBtn"); } else { hide("loanBtn"); hide("repayBtn"); }
+
+  renderAscii();
+  renderTownFeatures();
+  renderLog();
+}
+
+// ===== Start / Save / Load =====
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+
+  // Hide everything first (prevents buttons appearing too early)
+  hideAllActionButtons();
+  hide("upgrade_block");
+  hide("upgradeToStallBtn");
+  hide("upgradeToStoreBtn");
+  hide("hireHelpBtn");
+  hide("unlockNewsBtn");
+
+  // Only these two should appear immediately
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+
+function saveGame(silent){
+  if(!s) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    if(!silent){
+      setText("saveStatus", "Saved.");
+      setTimeout(function(){ setText("saveStatus", ""); }, 1200);
+    }
+  } catch(e){
+    setText("saveStatus", "Save failed (storage blocked).");
+  }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw){ alert("No save found on this device."); return; }
+    s = JSON.parse(raw);
+
+    hide("setup_block");
+    setNotice("Loaded save.", "yellow");
+
+    render();
+    log("Loaded save.");
+    startLoop();
+  } catch(e){
+    alert("Load failed.");
+  }
+}
+
+function restartGame(){
+  if(!confirm("Restart game? This clears your save.")) return;
+  localStorage.removeItem(SAVE_KEY);
+  stopLoop();
+  location.reload();
+}
+
+(function init(){
+  var raw = localStorage.getItem(SAVE_KEY);
+  if(raw) setText("saveStatus", "Save found on this device.");
+})();
+ChatGPT said:
+Absolutely — here’s a FULL cleaned-up game.js with all the changes working together, including:
+
+✅ Buttons only appear when they should
+
+✅ Advertise only shows after you pay for Gazette support
+
+✅ Loan/Repay only shows after Bank unlock
+
+✅ Fixes your current bug: you put gazetteSupported inside unlocked, but your code checks s.gazetteSupported (doesn’t exist). I fixed that properly.
+
+✅ Crash-proof show() / hide() so you don’t get blank screens again
+
+Copy/paste this entire file as game.js:
+
+/* =========================================================
+   Town Trade - game.js
+   Requires:
+   - ascii.js loaded BEFORE this file
+   - index.html has the IDs used below
+   ========================================================= */
+
+var SAVE_KEY = "townTrade_cb_style_v2";
+
+var ROLES = {
+  general_store: {
+    name: "General Store",
+    intro: "You set up shop selling essentials. Flour, cloth, candles… whatever keeps the town alive.",
+    baseIncome: 1.0,
+    serveMoney: 8,
+    serveRep: 2
+  },
+  blacksmith: {
+    name: "Blacksmith",
+    intro: "You start with a small forge corner. Fewer customers, bigger payouts.",
+    baseIncome: 1.0,
+    serveMoney: 10,
+    serveRep: 1
+  },
+  boarding_house: {
+    name: "Boarding House",
+    intro: "You begin by renting a spare room and offering meals. Reputation spreads fast in a small town.",
+    baseIncome: 1.0,
+    serveMoney: 7,
+    serveRep: 3
+  }
+};
+
+var STAGES = ["Stage 1", "Stage 2", "Stage 3"];
+
+var s = null;
+var tickHandle = null;
+var notice = { text: "", type: "" };
+
+/* ===== Crash display (so you see what broke) ===== */
+window.onerror = function (msg, url, line, col) {
+  try {
+    var ss = document.getElementById("saveStatus");
+    if (ss) ss.textContent = "ERROR: " + msg + " (line " + line + ")";
+  } catch (e) {}
+  return false;
+};
+
+/* ===== Helpers ===== */
+function $(id){ return document.getElementById(id); }
+
+function setHTML(id, html){
+  var el = $(id);
+  if(!el) return;
+  el.innerHTML = html;
+}
+
+function setText(id, text){
+  var el = $(id);
+  if(!el) return;
+  el.textContent = text;
+}
+
+function show(id){
+  var el = $(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return;
+  }
+  el.className = el.className.replace("hidden", "").trim();
+}
+
+function hide(id){
+  var el = $(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return;
+  }
+  if(el.className.indexOf("hidden") === -1) el.className += " hidden";
+}
+
+function money(n){
+  n = Math.floor(n);
+  return "$" + n.toString();
+}
+
+function clamp(n, a, b){
+  if(n < a) return a;
+  if(n > b) return b;
+  return n;
+}
+
+function setNotice(text, type){
+  notice.text = text || "";
+  notice.type = type || "";
+}
+
+function hideAllActionButtons(){
+  hide("serveBtn");
+  hide("goodDeedBtn");
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+}
+
+/* ===== State ===== */
+function newState(roleKey){
+  return {
+    roleKey: roleKey,
+    money: 50,
+    reputation: 60,
+    stage: 0,
+    debt: 0,
+
+    // IMPORTANT: this is NOT inside unlocked (we check s.gazetteSupported)
+    gazetteSupported: false,
+
+    incomeBonus: 0,
+    repGainBonus: 0,
+    demand: 1.0,
+
+    seconds: 0,
+    served: 0,
+    goodServed: 0,
+    badServed: 0,
+
+    unlocked: {
+      stall: false,
+      storefront: false,
+      newspaper: false, // this means "Gazette offer exists"
+      bank: false
+    },
+
+    logLines: []
+  };
+}
+
+function log(msg){
+  if(!s) return;
+  var ts = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  s.logLines.unshift("[" + ts + "] " + msg);
+  if(s.logLines.length > 18) s.logLines.pop();
+  renderLog();
+}
+
+function renderLog(){
+  if(!s) return;
+  setText("log", s.logLines.join("\n"));
+}
+
+function incomePerSecond(){
+  var role = ROLES[s.roleKey];
+  var stageBonus = s.stage * 0.8;
+  return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
+}
+
+/* ===== ASCII rendering ===== */
+function renderAscii(){
+  var artBlock = $("ascii_display");
+  var caption = $("ascii_caption");
+  if(!artBlock || !caption || !s) return;
+
+  var roleSet = (typeof ASCII_ART !== "undefined") ? ASCII_ART[s.roleKey] : null;
+  var art = roleSet ? roleSet[s.stage] : null;
+
+  if(art){
+    artBlock.textContent = art;
+    show("ascii_display");
+  } else {
+    artBlock.textContent = "";
+    hide("ascii_display");
+  }
+
+  if(s.roleKey === "general_store") caption.textContent = "You grow by keeping steady customers and trust.";
+  else if(s.roleKey === "blacksmith") caption.textContent = "Fewer jobs, heavier rewards. Mistakes cost.";
+  else if(s.roleKey === "boarding_house") caption.textContent = "Guests talk. Reputation matters fast.";
+  else caption.textContent = "";
+}
+
+function renderTownFeatures(){
+  if(!s) return;
+
+  hide("town_features");
+  hide("ascii_bank");
+  hide("ascii_gazette");
+
+  var town = (typeof TOWN_ASCII !== "undefined") ? TOWN_ASCII : null;
+  if(!town) return;
+
+  // Gazette art appears once the Gazette is unlocked (offer exists)
+  if(s.unlocked.newspaper && town.gazette && $("ascii_gazette")){
+    $("ascii_gazette").textContent = town.gazette;
+    show("ascii_gazette");
+    show("town_features");
+  }
+
+  // Bank art appears once bank unlocked
+  if(s.unlocked.bank && town.bank && $("ascii_bank")){
+    $("ascii_bank").textContent = town.bank;
+    show("ascii_bank");
+    show("town_features");
+  }
+}
+
+/* ===== Loop ===== */
+function startLoop(){
+  stopLoop();
+  tickHandle = setInterval(tick, 1000);
+}
+
+function stopLoop(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = null;
+}
+
+function tick(){
+  if(!s) return;
+
+  s.seconds += 1;
+
+  // passive earnings
+  s.money += incomePerSecond();
+
+  // demand drifts with rep
+  if(s.seconds % 10 === 0){
+    var drift = (s.reputation - 50) / 5000;
+    s.demand = clamp(s.demand + drift, 0.85, 1.20);
+  }
+
+  // bank interest
+  if(s.unlocked.bank && s.debt > 0 && s.seconds % 12 === 0){
+    var interest = Math.max(1, Math.floor(s.debt * 0.02));
+    s.debt += interest;
+    log("Bank interest increased your debt by " + money(interest) + ".");
+    if(s.debt >= 350){
+      setNotice("WARNING: Your debt is getting dangerous.", "red");
+    }
+  }
+
+  checkUnlocks();
+
+  if(s.seconds % 15 === 0) saveGame(true);
+
+  render();
+}
+
+/* ===== Unlock Logic (controls button visibility) ===== */
+function checkUnlocks(){
+  // always available after start
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  // Keep late-game buttons hidden unless unlocked
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+
+  // Stall upgrade becomes available
+  if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
+    s.unlocked.stall = true;
+    show("upgrade_block");
+    show("upgradeToStallBtn");
+    log("You spot a better opportunity to expand.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
+  }
+
+  // Storefront upgrade becomes available
+  if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
+    s.unlocked.storefront = true;
+    show("upgrade_block");
+    show("upgradeToStoreBtn");
+    log("A bigger expansion is possible now.");
+    setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
+  }
+
+  // Gazette offer appears (NOT ads yet)
+  if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
+    s.unlocked.newspaper = true;
+    show("upgrade_block");
+    show("unlockNewsBtn");
+    log("The Town Gazette offers to feature you (for a price).");
+    setNotice("NEW OPTION: Support the Town Gazette", "yellow");
+  }
+
+  // Show / hide the Gazette upgrade button
+  // If you already supported it, hide the support button.
+  if(s.unlocked.newspaper && !s.gazetteSupported){
+    show("unlockNewsBtn");
+  } else {
+    hide("unlockNewsBtn");
+  }
+
+  // Advertise ONLY after you paid for Gazette support
+  if(s.gazetteSupported){
+    show("advertiseBtn");
+  } else {
+    hide("advertiseBtn");
+  }
+
+  // Bank unlock
+  if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
+    s.unlocked.bank = true;
+    log("The bank clerk offers you a loan. (Be careful.)");
+    setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
+  }
+
+  // Loan/Repay ONLY after bank unlocked
+  if(s.unlocked.bank){
+    show("loanBtn");
+    show("repayBtn");
+  } else {
+    hide("loanBtn");
+    hide("repayBtn");
+  }
+
+  show("log");
+}
+
+/* ===== Actions ===== */
+function serveCustomer(){
+  var role = ROLES[s.roleKey];
+
+  var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
+  var isGood = (Math.random() < goodChance);
+
+  s.served += 1;
+
+  if(isGood){
+    s.goodServed += 1;
+
+    var payout = (role.serveMoney + s.stage*3) * (0.85 + (s.reputation/100)*0.5);
+    s.money += payout;
+
+    var repGain = Math.floor((role.serveRep + s.repGainBonus));
+    s.reputation = clamp(s.reputation + repGain, 0, 100);
+
+    log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+  } else {
+    s.badServed += 1;
+
+    var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
+    s.money = Math.max(0, s.money - loss);
+
+    var repHit = Math.max(1, 4 - Math.floor(s.stage/2));
+    s.reputation = clamp(s.reputation - repHit, 0, 100);
+
+    log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+    setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
+  }
+
+  render();
+  saveGame(true);
+}
+
+function doGoodDeed(){
+  var cost = 12 + (s.stage*4);
+  if(s.money < cost){
+    log("You want to help, but you don't have enough cash right now.");
+    setNotice("Not enough money for that right now.", "red");
+    return;
+  }
+
+  s.money -= cost;
+
+  var rep = 4 + Math.floor(s.stage/2);
+  s.reputation = clamp(s.reputation + rep, 0, 100);
+
+  log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+  setNotice("Good deed completed: reputation increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function advertise(){
+  if(!s.gazetteSupported){
+    log("You need the Gazette's support before you can advertise.");
+    setNotice("Support the Gazette first.", "red");
+    return;
+  }
+
+  var cost = 30 + (s.stage*10);
+  if(s.money < cost){
+    log("Advertising costs money. You don't have enough.");
+    setNotice("Not enough money to advertise.", "red");
+    return;
+  }
+
+  s.money -= cost;
+  s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
+
+  log("You ran an advertisement in the Gazette. Demand increased a bit.");
+  setNotice("Advertising worked: demand increased.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function takeLoan(){
+  if(!s.unlocked.bank){
+    log("No bank available yet.");
+    return;
+  }
+
+  var amount = 120;
+  s.money += amount;
+  s.debt += amount;
+
+  log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+  setNotice("Loan taken: remember debt grows with interest.", "red");
+  render();
+  saveGame(true);
+}
+
+function repayLoan(){
+  if(s.debt <= 0){
+    log("You have no debt.");
+    setNotice("No debt to repay.", "yellow");
+    return;
+  }
+
+  var pay = Math.min(80, s.debt);
+  if(s.money < pay){
+    log("You don't have enough money to repay right now.");
+    setNotice("Not enough money to repay debt.", "red");
+    return;
+  }
+
+  s.money -= pay;
+  s.debt -= pay;
+
+  log("You repaid " + money(pay) + " of your debt.");
+  setNotice("Debt reduced. Nice.", "yellow");
+  render();
+  saveGame(true);
+}
+
+function buyUpgrade(which){
+  if(which === "stall"){
+    var cost = 120;
+    if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); return; }
+    if(s.stage >= 1){ log("You already upgraded."); return; }
+
+    s.money -= cost;
+    s.stage = 1;
+    s.incomeBonus += 1;
+
+    log("Upgrade complete: Stage 1 → Stage 2.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "storefront"){
+    var cost2 = 480;
+    if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); return; }
+    if(s.stage >= 2){ log("You already have the top upgrade."); return; }
+    if(s.stage < 1){ log("You need the first upgrade first."); return; }
+
+    s.money -= cost2;
+    s.stage = 2;
+    s.incomeBonus += 3;
+
+    log("Upgrade complete: Stage 2 → Stage 3.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "helper"){
+    var cost3 = 260;
+    if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); return; }
+
+    s.money -= cost3;
+    s.incomeBonus += 2;
+    s.repGainBonus += 1;
+
+    log("You hired steady help.");
+    setNotice("Upgrade purchased.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+
+  if(which === "newspaper"){
+    var cost4 = 200;
+
+    // must have the Gazette offer first
+    if(!s.unlocked.newspaper){
+      log("You haven't met the Gazette yet.");
+      return;
+    }
+
+    // already supported
+    if(s.gazetteSupported){
+      log("The Gazette already supports you.");
+      return;
+    }
+
+    if(s.money < cost4){
+      log("You need " + money(cost4) + " to support the Gazette.");
+      return;
+    }
+
+    s.money -= cost4;
+    s.gazetteSupported = true; // ✅ this enables Advertise
+    s.reputation = clamp(s.reputation + 6, 0, 100);
+
+    log("The Gazette features your business. Advertising unlocked.");
+    setNotice("Unlocked: advertising.", "yellow");
+    render(); saveGame(true);
+    return;
+  }
+}
+
+/* ===== Render ===== */
+function render(){
+  if(!s) return;
+
+  var role = ROLES[s.roleKey];
+
+  setHTML("role_line", "<b>Role:</b> " + role.name);
+  setHTML("money_line", "<b>Money:</b> " + money(s.money) + " <span class='muted'>(Debt: " + money(s.debt) + ")</span>");
+  setHTML("rep_line", "<b>Reputation:</b> " + s.reputation + " / 100");
+  setHTML("stage_line", "<b>Progress:</b> " + STAGES[s.stage]);
+  setHTML("income_line", "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second <span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>");
+
+  var baseStory = "";
+  if(s.seconds < 8) baseStory = role.intro;
+  else if(s.stage === 0) baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
+  else if(s.stage === 1) baseStory = "Your name is spreading. Reputation will shape your future here.";
+  else baseStory = "You’ve become a real part of the town. Bigger decisions are coming.";
+
+  var noticeHtml = "";
+  if(notice.text){
+    if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+    else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+    else noticeHtml = notice.text + "<br/><br/>";
+  }
+  setHTML("story_line", noticeHtml + baseStory);
+
+  show("role_line");
+  show("money_line");
+  show("rep_line");
+  show("stage_line");
+  show("income_line");
+  show("story_line");
+  show("log");
+
+  // Upgrades visibility
+  if(s.unlocked.stall || s.unlocked.storefront || s.unlocked.newspaper || s.stage >= 1) show("upgrade_block");
+
+  if(s.unlocked.stall && s.stage === 0) show("upgradeToStallBtn"); else hide("upgradeToStallBtn");
+  if(s.unlocked.storefront && s.stage === 1) show("upgradeToStoreBtn"); else hide("upgradeToStoreBtn");
+
+  if(s.stage >= 1) show("hireHelpBtn"); else hide("hireHelpBtn");
+
+  // Support Gazette button only until purchased
+  if(s.unlocked.newspaper && !s.gazetteSupported) show("unlockNewsBtn");
+  else hide("unlockNewsBtn");
+
+  // Action buttons controlled by checkUnlocks(), but render still safely mirrors state:
+  if(s.gazetteSupported) show("advertiseBtn"); else hide("advertiseBtn");
+  if(s.unlocked.bank){ show("loanBtn"); show("repayBtn"); } else { hide("loanBtn"); hide("repayBtn"); }
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  renderAscii();
+  renderTownFeatures();
+  renderLog();
+}
+
+/* ===== Start / Save / Load ===== */
+function startGame(){
+  var roleKey = $("roleSelect").value;
+  s = newState(roleKey);
+
+  hide("setup_block");
+
+  // Hide everything first
+  hideAllActionButtons();
+  hide("upgrade_block");
+  hide("upgradeToStallBtn");
+  hide("upgradeToStoreBtn");
+  hide("hireHelpBtn");
+  hide("unlockNewsBtn");
+
+  // Only these two show immediately
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
+  render();
+  log("You begin. The town watches.");
+  startLoop();
+  saveGame(true);
+}
+
+function saveGame(silent){
+  if(!s) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    if(!silent){
+      setText("saveStatus", "Saved.");
+      setTimeout(function(){ setText("saveStatus", ""); }, 1200);
+    }
+  } catch(e){
+    setText("saveStatus", "Save failed (storage blocked).");
+  }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw){ alert("No save found on this device."); return; }
+    s = JSON.parse(raw);
+
+    hide("setup_block");
+    setNotice("Loaded save.", "yellow");
+
+    // When loading, make sure buttons refresh correctly
+    hideAllActionButtons();
+    render();
+    log("Loaded save.");
+    startLoop();
+  } catch(e){
+    alert("Load failed.");
+  }
+}
+
+function restartGame(){
+  if(!confirm("Restart game? This clears your save.")) return;
+  localStorage.removeItem(SAVE_KEY);
+  stopLoop();
+  location.reload();
+}
+
+(function init(){
+  var raw = localStorage.getItem(SAVE_KEY);
+  if(raw) setText("saveStatus", "Save found on this device.");
+})();
+One important note
+Your index.html calls:
+
+onclick="buyUpgrade('newspaper');"
+So this script keeps that exact behavior: the Support the Town Gazette upgrade is what flips gazetteSupported = true and makes Advertise appear.
+
+If you want, paste your ascii.js too and I’ll make sure the bank/gazette art shows at the right times (unlock vs supported).
+
+You said:
+It is still doing it, do we need to update styles or index to make it work?
+ChatGPT said:
+
+Thought for 12s
+Yes — if those buttons are showing even when they have the hidden class, then this is almost always a CSS problem:
+
+✅ Root cause
+Your .hidden class is either:
+
+missing from styles.css, or
+
+being overridden by another rule
+
+So the game is correctly adding/removing hidden, but it’s not actually hiding anything.
+
+Fix 1: Make .hidden impossible to override
+Open styles.css and make sure you have this (exactly):
+
+.hidden { display: none !important; }
+Put it near the top of the file so it applies early.
+
+Fix 2: Make buttons stack correctly (optional but helps)
+If you want those buttons to look like the Candy Box vibe and not float weird:
+
+button { display: inline-block; }
+(Or leave it alone — the main fix is .hidden.)
+
+Fix 3: Hard refresh so your browser isn’t using the old CSS
+After editing styles.css, do a hard refresh:
+
+Windows: Ctrl + Shift + R
+
+Or: Ctrl + F5
+
+If you don’t hard refresh, the browser may keep the old CSS and it’ll “still do it.”
+
+Quick check (takes 5 seconds)
+Right-click the “Run a small advertisement” button → Inspect → look at its class list.
+If you see hidden in the class list but it’s still visible → 100% it’s the CSS .hidden rule.
+
+If you paste your current styles.css here, I’ll rewrite it clean so .hidden and the panel layout can’t break again.
+
+You said:
+this is my css now: /* =========================================================
+   GLOBAL PAGE STYLE
+   ========================================================= */
+
+body {
+  background-color: #FFFFFF;
+  overflow-y: scroll;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  color: #282e32;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================================================
+   MAIN WRAPPER
+   Keeps the game from being glued to the edge of the screen
+   ========================================================= */
+
+#tab_town_trade {
+  width: 920px;          /* adjust if you want wider */
+  margin: 10px auto;     /* centers the whole game */
+  padding: 6px;
+}
+
+/* =========================================================
+   LAYOUT (Left/Right panels)
+   ========================================================= */
+
+.panelRight {
+  float: right;
+  width: 420px;
+  padding-left: 12px;
+  box-sizing: border-box;
+}
+
+.panelLeft {
+  overflow: hidden; /* allows left panel to sit next to float */
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+.clear { clear: both; }
+
+/* =========================================================
+   SHOW / HIDE HELPERS
+   ========================================================= */
+
+.hidden { display: none; }
+
+/* =========================================================
+   BUTTONS (simple CandyBox-like feel)
+   ========================================================= */
+
+button {
+  border: 1px solid #464c54;
+  margin-bottom: 2px;
+  padding: 3px 6px;
+  background-color: #ffffff;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  border: 2px solid #464c54;
+  padding: 2px 5px; /* keeps size stable when border thickens */
+}
+
+#restartButton {
+  margin-left: 30px;
+}
+
+/* Optional: make your “home_button” class consistent */
+.home_button {
+  display: inline-block;
+}
+
+/* =========================================================
+   TEXT HELPERS
+   ========================================================= */
+
+.muted { color: #666; }
+.tiny  { font-size: 12px; color: #666; }
+
+/* =========================================================
+   ASCII DISPLAY
+   ========================================================= */
+
+pre {
+  font-family: monospace;
+  font-size: 13px;
+  margin: 0;
+  white-space: pre; /* keep spacing exactly */
+}
+
+/* Make ASCII areas look clean and separated */
+#ascii_display {
+  padding: 6px 0;
+}
+
+/* Town features area spacing */
+#town_features pre {
+  margin-top: 8px;
+}
+
+/* =========================================================
+   NOTICE HIGHLIGHTING (yellow/red messages)
+   ========================================================= */
+
+.notice-yellow {
+  color: #b58900; /* readable yellow */
+  font-weight: bold;
+}
+
+.notice-red {
+  color: #b00020; /* strong red */
+  font-weight: bold;
+}
+
+.upgrade_button {
+  background-color: #f8f2b1; /* soft yellow */
+  font-weight: bold;
+}
+
+/* =========================================================
+   OPTIONAL DARK MODE HOOKS (future)
+   ========================================================= */
+
+.dark_mode { background-color: #111; color: #F1F1F1; }
+.dark_button { background-color: #171717; color: #9D9D9D !important; }
+.dark_button:disabled { background-color: #404040; }
+.dark_link { color: orange; }
+.dark_link:visited { color: chocolate; }
+.dark_table { border-color: #F1F1F1; }
+ChatGPT said:
+Your CSS is almost right — the problem is that .hidden { display:none; } can still get overridden (by browser defaults, inline styles, or other CSS). We’ll make it unbreakable.
+
+Also, your screenshot shows the “later” buttons are appearing even before you click Start — that can happen if the browser is caching old CSS/JS, so we’ll add a couple safety rules + a hard-refresh step.
+
+✅ Replace your .hidden rule with this (IMPORTANT)
+Change this:
+
+.hidden { display: none; }
+to this:
+
+.hidden { display: none !important; }
+That one change alone usually fixes it instantly.
+
+✅ Updated styles.css (copy/paste full file)
+Here’s your same CSS but with the stronger hidden rule and a couple tiny layout improvements:
+
+/* =========================================================
+   GLOBAL PAGE STYLE
+   ========================================================= */
+
+body {
+  background-color: #FFFFFF;
+  overflow-y: scroll;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  color: #282e32;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================================================
+   MAIN WRAPPER
+   ========================================================= */
+
+#tab_town_trade {
+  width: 920px;
+  margin: 10px auto;
+  padding: 6px;
+}
+
+/* =========================================================
+   LAYOUT (Left/Right panels)
+   ========================================================= */
+
+.panelRight {
+  float: right;
+  width: 420px;
+  padding-left: 12px;
+  box-sizing: border-box;
+}
+
+.panelLeft {
+  overflow: hidden;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+.clear { clear: both; }
+
+/* =========================================================
+   SHOW / HIDE HELPERS
+   (IMPORTANT: use !important so hidden can't be overridden)
+   ========================================================= */
+
+.hidden { display: none !important; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+button {
+  border: 1px solid #464c54;
+  margin-bottom: 2px;
+  padding: 3px 6px;
+  background-color: #ffffff;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  border: 2px solid #464c54;
+  padding: 2px 5px;
+}
+
+#restartButton { margin-left: 30px; }
+
+.home_button { display: inline-block; }
+
+/* =========================================================
+   TEXT HELPERS
+   ========================================================= */
+
+.muted { color: #666; }
+.tiny  { font-size: 12px; color: #666; }
+
+/* =========================================================
+   ASCII DISPLAY
+   ========================================================= */
+
+pre {
+  font-family: monospace;
+  font-size: 13px;
+  margin: 0;
+  white-space: pre;
+}
+
+#ascii_display { padding: 6px 0; }
+
+#town_features pre { margin-top: 8px; }
+
+/* =========================================================
+   NOTICE HIGHLIGHTING
+   ========================================================= */
+
+.notice-yellow { color: #b58900; font-weight: bold; }
+.notice-red { color: #b00020; font-weight: bold; }
+
+.upgrade_button {
+  background-color: #f8f2b1;
+  font-weight: bold;
+}
+
+/* =========================================================
+   OPTIONAL DARK MODE HOOKS (future)
+   ========================================================= */
+
+.dark_mode { background-color: #111; color: #F1F1F1; }
+.dark_button { background-color: #171717; color: #9D9D9D !important; }
+.dark_button:disabled { background-color: #404040; }
+.dark_link { color: orange; }
+.dark_link:visited { color: chocolate; }
+.dark_table { border-color: #F1F1F1; }
+✅ After you save styles.css, do a HARD refresh
+This is required because browsers love caching CSS/JS.
+
+Windows Chrome: Ctrl + Shift + R
+
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. Check important info.
+ChatGPT is still generating a response...
