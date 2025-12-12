@@ -135,6 +135,14 @@ function incomePerSecond(){
   return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
 }
 
+function hideAllActionButtons(){
+  hide("serveBtn");
+  hide("goodDeedBtn");
+  hide("advertiseBtn");
+  hide("loanBtn");
+  hide("repayBtn");
+}
+
 // ===== ASCII rendering =====
 function renderAscii(){
   var artBlock = $("ascii_display");
@@ -486,6 +494,19 @@ function startGame(){
   s = newState(roleKey);
 
   hide("setup_block");
+
+  // Hide everything first (prevents buttons appearing too early)
+  hideAllActionButtons();
+  hide("upgrade_block");
+  hide("upgradeToStallBtn");
+  hide("upgradeToStoreBtn");
+  hide("hireHelpBtn");
+  hide("unlockNewsBtn");
+
+  // Only these two should appear immediately
+  show("serveBtn");
+  show("goodDeedBtn");
+
   setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
 
   render();
