@@ -18,77 +18,11 @@
 
     <!-- =========================================================
          RIGHT PANEL
-         Shows the ASCII "town objects" you unlock (cart, stall, etc.)
+         ASCII art gets injected here (from ascii.js via game.js)
          ========================================================= -->
     <div class="panelRight">
-
-      <!-- Cart -->
-      <span id="town_object_cart" class="hidden">
-<pre>
-   __
- _|__|_
-(  __  )   A little cart in town
- |____|
-  /  \
-
-</pre>
-        <span class="tiny">Your first setup. It earns a tiny bit each second.</span><br/><br/>
-      </span>
-
-      <!-- Stall -->
-      <span id="town_object_stall" class="hidden">
-<pre>
-   _______
-  |  ___  |   Market stall
-  | |___| |
-  |_______|
-   /     \
-
-</pre>
-        <span class="tiny">More room, more customers.</span><br/><br/>
-      </span>
-
-      <!-- Storefront -->
-      <span id="town_object_storefront" class="hidden">
-<pre>
-   _____________
-  |  TOWN TRADE |
-  |  _________  |
-  | |         | |
-  | |  OPEN   | |
-  |_|_________|_|
-
-</pre>
-        <span class="tiny">A real storefront. People start trusting you.</span><br/><br/>
-      </span>
-
-      <!-- Newspaper -->
-      <span id="town_object_newspaper" class="hidden">
-<pre>
-  .-------------------.
-  |  THE TOWN GAZETTE  |
-  |  "Local commerce!" |
-  '-------------------'
-
-</pre>
-        <span class="tiny">You can advertise or build reputation through community choices.</span><br/><br/>
-      </span>
-
-      <!-- Bank -->
-      <span id="town_object_bank" class="hidden">
-<pre>
-   ___________
-  |  BANK OF  |
-  |  RIVER    |
-  |___________|
-   |  __  |
-   | |  | |
-   |_|__|_|
-
-</pre>
-        <span class="tiny">Loans become available (and dangerous).</span><br/><br/>
-      </span>
-
+      <pre id="ascii_display" class="hidden"></pre>
+      <span id="ascii_caption" class="tiny"></span>
     </div>
 
     <!-- =========================================================
@@ -113,8 +47,9 @@
           <option value="blacksmith">Blacksmith</option>
           <option value="boarding_house">Boarding House</option>
         </select>
+
         <button class="home_button" onclick="startGame();">Start game</button><br/>
-        <span class="tiny muted">Inspired by Candybox Games</span>
+        <span class="tiny muted">Inspired by Candy Box &amp; Candy Box 2</span>
         <br/><br/>
       </span>
 
@@ -146,6 +81,7 @@
         <br/>
       </span>
 
+      <!-- Log -->
       <pre id="log" class="hidden"></pre>
 
     </div>
@@ -153,7 +89,9 @@
     <br class="clear" />
   </div>
 
-  <!-- 2) JS file = all game logic -->
+  <!-- IMPORTANT: ASCII file must load BEFORE game.js -->
+  <script src="ascii.js"></script>
   <script src="game.js"></script>
+
 </body>
 </html>
