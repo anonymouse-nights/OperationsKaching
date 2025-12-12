@@ -50,18 +50,41 @@
     p = Math.max(1, Math.floor(Number(p)));
     if(!isFinite(p)) p = item.unitCost + 2;
 
-    var stock = prompt("How many units do you buy for starting stock? (Example: 20)", "18");
-    if(stock === null) return;
-    stock = Math.max(1, Math.floor(Number(stock)));
-    if(!isFinite(stock)) stock = 18;
+var stock = prompt(
+  "How many units do you buy for starting stock?\n" +
+  "(Cost per unit: $" + item.unitCost + ")\n\n" +
+  "Example: 18",
+  "18"
+);
+if(stock === null) return;
+stock = Math.max(1, Math.floor(Number(stock)));
+if(!isFinite(stock)) stock = 18;
 
-    var totalCost = stock * item.unitCost;
-    if(st.money < totalCost){
-      api.setNotice("Not enough money to buy that much stock.", "red");
-      api.log("Not enough money for starting stock.");
-      return;
-    }
-    st.money -= totalCost;
+var totalCost = stock * item.unitCost;
+var left = st.money - totalCost;
+
+var confirmBuy = prompt(
+  "Confirm purchase:\n\n" +
+  item.name + " x" + stock + "\n" +
+  "Total cost: $" + totalCost + "\n" +
+  "Money after: $" + left + "\n\n" +
+  "Type YES to confirm (anything else cancels):",
+  "YES"
+);
+if(confirmBuy === null) return;
+if(String(confirmBuy).trim().toUpperCase() !== "YES"){
+  api.setNotice("Purchase canceled.", "red");
+  api.log("Starting stock purchase canceled.");
+  return;
+}
+
+if(st.money < totalCost){
+  api.setNotice("Not enough money to buy that much stock.", "red");
+  api.log("Not enough money for starting stock.");
+  return;
+}
+
+st.money -= totalCost;
 
     st.gs.itemKey = item.key;
     st.gs.itemName = item.name;
