@@ -55,14 +55,20 @@ function setText(id, text){
 }
 
 function show(id){
-  var el = $(id);
-  if(!el) return;
+  var el = document.getElementById(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return; // prevents blank-screen crash
+  }
   el.className = el.className.replace("hidden", "").trim();
 }
 
 function hide(id){
-  var el = $(id);
-  if(!el) return;
+  var el = document.getElementById(id);
+  if(!el){
+    console.warn("Missing element id:", id);
+    return;
+  }
   if(el.className.indexOf("hidden") === -1) el.className += " hidden";
 }
 
