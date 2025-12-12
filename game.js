@@ -229,6 +229,11 @@ function tick(){
 
 // ===== Unlocks =====
 function checkUnlocks(){
+  // ALWAYS available after game start
+  show("serveBtn");
+  show("goodDeedBtn");
+
+  // --- Stall upgrade becomes available ---
   if(!s.unlocked.stall && (s.money >= 120 || s.served >= 10)){
     s.unlocked.stall = true;
     show("upgrade_block");
@@ -237,33 +242,58 @@ function checkUnlocks(){
     setNotice("NEW UPGRADE AVAILABLE: Stage 1 → Stage 2", "yellow");
   }
 
+  // --- Storefront upgrade becomes available ---
   if(!s.unlocked.storefront && (s.money >= 450 || s.reputation >= 75)){
     s.unlocked.storefront = true;
+    show("upgrade_block");
     show("upgradeToStoreBtn");
     log("A bigger expansion is possible now.");
     setNotice("NEW UPGRADE AVAILABLE: Stage 2 → Stage 3", "yellow");
   }
 
+  // --- Gazette unlock (button appears, but ads still not active until bought) ---
   if(!s.unlocked.newspaper && (s.reputation >= 70 || s.goodServed >= 8)){
     s.unlocked.newspaper = true;
+    show("upgrade_block");
     show("unlockNewsBtn");
     log("The Town Gazette offers to feature you (for a price).");
-    setNotice("NEW OPTION: Support the Town Gazette (advertising)", "yellow");
+    setNotice("NEW OPTION: Support the Town Gazette", "yellow");
   }
 
+  // --- Bank unlock ---
   if(!s.unlocked.bank && (s.money >= 220 || s.stage >= 1)){
     s.unlocked.bank = true;
-    show("loanBtn");
-    show("repayBtn");
     log("The bank clerk offers you a loan. (Be careful.)");
     setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
   }
 
-  show("serveBtn");
-  show("goodDeedBtn");
-  show("log");
+  // --- Show Advertise ONLY after Gazette is supported (your buyUpgrade('newspaper') does that) ---
+  if(s.unlocked.newspaper){
+    // Only show the "Support Gazette" button until purchased
+    show("unlockNewsBtn");
+  } else {
+    hide("unlockNewsBtn");
+  }
 
-  if(s.unlocked.newspaper) show("advertiseBtn");
+  // The actual advertise button should only show AFTER you pay for newspaper support.
+  // We can use a separate flag for that:
+  if(s.unlocked.newspaper && s.gazetteSupported){
+    show("advertiseBtn");
+  } else {
+    hide("advertiseBtn");
+  }
+
+  // --- Loan/Repay ONLY after bank unlocked ---
+  if(s.unlocked.bank){
+    show("loanBtn");
+    show("repayBtn");
+  } else {
+    hide("loanBtn");
+    hide("repayBtn");
+  }
+
+  // Log should be visible once the game starts
+  show("log");
 }
 
 // ===== Actions =====
