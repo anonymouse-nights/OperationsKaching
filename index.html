@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Town Trade: A Business Trail</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b0f14; color: #e8eef6; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 18px; }
+    .card { background:#111827; border:1px solid #223047; border-radius:14px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    h1 { font-size: 20px; margin: 0 0 10px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; margin: 12px 0; }
+    .pill { background:#0b1220; border:1px solid #223047; padding:8px 10px; border-radius:999px; font-size: 13px; }
+    .story { white-space: pre-wrap; line-height: 1.45; font-size: 15px; }
+    .choices { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
+    button { background:#1f2937; color:#e8eef6; border:1px solid #334155; border-radius: 10px; padding:10px 12px; cursor:pointer; }
+    button:hover { background:#243244; }
+    button.primary { background:#2563eb; border-color:#3b82f6; }
+    button.primary:hover { background:#1d4ed8; }
+    button.danger { background:#7f1d1d; border-color:#ef4444; }
+    .muted { color:#9fb2c8; font-size: 13px; margin-top: 10px; }
+    .split { display:flex; gap:12px; flex-wrap:wrap; }
+    input, select { background:#0b1220; color:#e8eef6; border:1px solid #223047; border-radius: 10px; padding:10px 12px; }
+    .footer { display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px; }
+    .tiny { font-size: 12px; color:#9fb2c8; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Town Trade: A Business Trail (Prototype)</h1>
+
+      <div id="setupPanel">
+        <div class="story">
+Welcome! You’re running a small-town business in the late 1800s.
+
+Each turn = 1 month.
+You’ll set a strategy, survive events, pay bills, and try not to go broke.
+
+Pick your business and team name to begin.
+        </div>
+
+        <div class="row">
+          <input id="teamName" placeholder="Team name (ex: The Iron Mules)" maxlength="28" />
+          <select id="bizType">
+            <option value="general_store">General Store</option>
+            <option value="blacksmith">Blacksmith</option>
+            <option value="boarding_house">Boarding House</option>
+          </select>
+          <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+
+        <div class="choices">
+          <button class="primary" id="btnStart">Start Game</button>
+          <button id="btnLoad">Load Save</button>
+          <button class="danger" id="btnReset">Reset Save</button>
+        </div>
+
+        <div class="muted">Teacher note: this version saves locally on the student’s device (localStorage).</div>
+      </div>
+
+      <div id="gamePanel" style="display:none;">
+        <div class="row" id="statsRow"></div>
+        <div class="story" id="story"></div>
+        <div class="choices" id="choices"></div>
+
+        <div class="footer">
+          <button id="btnSave">Save</button>
+          <button id="btnQuit">Quit to Start</button>
+        </div>
+        <div class="tiny" id="tiny"></div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/** ---------------------------
+ *  Game Data + Helpers
+ *  --------------------------- */
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const BUSINESS = {
+  general_store: {
+    name: "General Store",
+    startCash: 600,
+    startInv: 40,
+    baseDemand: 1.05,
+    monthlyRent: 40,
+    monthlyWages: 25
+  },
+  blacksmith: {
+    name: "Blacksmith",
+    startCash: 520,
+    startInv: 20,
+    baseDemand: 1.00,
+    monthlyRent: 35,
+    monthlyWages: 30
+  },
+  boarding_house: {
+    name: "Boarding House",
+    startCash: 700,
+    startInv: 25,
+    baseDemand: 1.10,
+    monthlyRent: 55,
+    monthlyWages: 35
+  }
+};
+
+const DIFFICULTY = {
+  easy:   { expenseMult: 0.90, eventMult: 0.85, startRep: 65, maxDebt: 300, interest: 0.02 },
+  normal: { expenseMult: 1.00, eventMult: 1.00, startRep: 60, maxDebt: 250, interest: 0.03 },
+  hard:   { expenseMult: 1.10, eventMult: 1.20, startRep: 55, maxDebt: 200, interest: 0.04 }
+};
+
+function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+function money(n){
+  const sign = n < 0 ? "-" : "";
+  const v = Math.abs(Math.round(n));
+  return sign + "$" + v.toString();
+}
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function scoreGame(s){
+  // Simple, explainable classroom score:
+  // NetWorth + Reputation*10 - Debt*2 + MonthsSurvived*50
+  const netWorth = s.cash + (s.inventory * 5);
+  return Math.round(netWorth + (s.reputation * 10) - (s.debt * 2) + (s.turn * 50));
+}
+
+/** ---------------------------
+ *  Events (starter deck)
+ *  Each choice returns effects:
+ *  cashDelta, repDelta, invDelta, debtDelta, demandDelta
+ *  --------------------------- */
+const EVENTS = [
+  {
+    text: "A wagon is delayed by muddy roads. Supplies cost more this month.",
+    choices: [
+      { label: "Raise prices to protect profit.", fx: (m)=>({ repDelta:-4, demandDelta:-0.08 }) },
+      { label: "Absorb the cost (keep prices fair).", fx: (m)=>({ cashDelta:-35*m }) },
+      { label: "Order less stock to reduce risk.", fx: (m)=>({ invDelta:-6, repDelta:+1 }) },
+    ]
+  },
+  {
+    text: "A traveling preacher praises honest merchants in town.",
+    choices: [
+      { label: "Donate small supplies to the needy.", fx: (m)=>({ cashDelta:-20*m, repDelta:+6 }) },
+      { label: "Stay neutral—focus on business.", fx: (m)=>({ repDelta:+1 }) },
+      { label: "Advertise hard using the moment.", fx: (m)=>({ cashDelta:-15*m, demandDelta:+0.10 }) },
+    ]
+  },
+  {
+    text: "A minor fire breaks out nearby. People rush to buy essentials.",
+    choices: [
+      { label: "Sell essentials at normal price.", fx: (m)=>({ repDelta:+5, demandDelta:+0.10 }) },
+      { label: "Price-gouge (high profit, big risk).", fx: (m)=>({ cashDelta:+60*m, repDelta:-10 }) },
+      { label: "Limit sales per customer.", fx: (m)=>({ repDelta:+3, invDelta:-4 }) },
+    ]
+  },
+  {
+    text: "A new competitor opens across the street.",
+    choices: [
+      { label: "Lower prices to compete.", fx: (m)=>({ cashDelta:-25*m, demandDelta:+0.08 }) },
+      { label: "Improve quality and service.", fx: (m)=>({ cashDelta:-20*m, repDelta:+5 }) },
+      { label: "Ignore it—stay consistent.", fx: (m)=>({ repDelta:-1 }) },
+    ]
+  },
+  {
+    text: "A local worker asks for a wage raise.",
+    choices: [
+      { label: "Give a fair raise.", fx: (m)=>({ cashDelta:-20*m, repDelta:+4 }) },
+      { label: "Refuse the raise.", fx: (m)=>({ repDelta:-3 }) },
+      { label: "Offer a smaller raise + bonus if sales grow.", fx: (m)=>({ cashDelta:-10*m, repDelta:+2, demandDelta:+0.05 }) },
+    ]
+  }
+];
+
+/** ---------------------------
+ *  Game State
+ *  --------------------------- */
+const SAVE_KEY = "townTradeSave_v1";
+
+let state = null;
+
+function newGame(teamName, bizKey, diffKey){
+  const biz = BUSINESS[bizKey];
+  const diff = DIFFICULTY[diffKey];
+
+  return {
+    teamName: teamName || "Unnamed Team",
+    bizKey,
+    diffKey,
+
+    // Time
+    year: 1890,
+    monthIndex: 0, // 0 = Jan
+    turn: 0,
+
+    // Stats
+    cash: biz.startCash,
+    debt: 0,
+    reputation: diff.startRep,
+    inventory: biz.startInv, // abstract inventory units
+    demand: biz.baseDemand,
+
+    // Flags
+    alive: true,
+    lastEventText: "",
+    lastResultText: ""
+  };
+}
+
+function save(){
+  if(!state) return;
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  tiny("Saved.");
+}
+function load(){
+  const raw = localStorage.getItem(SAVE_KEY);
+  if(!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+function resetSave(){
+  localStorage.removeItem(SAVE_KEY);
+  tiny("Save cleared.");
+}
+
+function tiny(msg){
+  const el = document.getElementById("tiny");
+  if(el) el.textContent = msg || "";
+}
+
+/** ---------------------------
+ *  Core Simulation
+ *  --------------------------- */
+function monthlyExpenses(){
+  const biz = BUSINESS[state.bizKey];
+  const diff = DIFFICULTY[state.diffKey];
+  const expenses = (biz.monthlyRent + biz.monthlyWages) * diff.expenseMult;
+
+  // Inventory carrying/spoilage (simple)
+  const spoil = Math.max(0, Math.round(state.inventory * 0.08)); // 8% baseline
+  state.inventory = Math.max(0, state.inventory - spoil);
+
+  state.cash -= expenses;
+  return { expenses: Math.round(expenses), spoiled: spoil };
+}
+
+function salesPhase(){
+  // Sales based on demand, reputation, and available inventory
+  const repFactor = 0.70 + (state.reputation / 100) * 0.60; // 0.70 to 1.30
+  const demandFactor = clamp(state.demand, 0.70, 1.35);
+
+  // Units sold: base 10–22 * factors, but limited by inventory
+  const base = randInt(10, 22);
+  const unitsWanted = Math.round(base * repFactor * demandFactor);
+  const unitsSold = Math.min(state.inventory, Math.max(0, unitsWanted));
+
+  // Revenue per unit depends on business type (simple)
+  const pricePerUnit =
+    state.bizKey === "blacksmith" ? 9 :
+    state.bizKey === "boarding_house" ? 7 : 6;
+
+  const revenue = unitsSold * pricePerUnit;
+  // COGS (cost of goods / materials)
+  const cogs = Math.round(unitsSold * (pricePerUnit * 0.45));
+
+  state.inventory -= unitsSold;
+  state.cash += (revenue - cogs);
+
+  // Small rep drift
+  state.reputation = clamp(state.reputation + 1, 0, 100);
+
+  return { unitsSold, revenue, cogs };
+}
+
+function interestPhase(){
+  const diff = DIFFICULTY[state.diffKey];
+  if(state.debt <= 0) return 0;
+  const interest = Math.round(state.debt * diff.interest);
+  state.cash -= interest;
+  return interest;
+}
+
+function checkGameOver(){
+  const diff = DIFFICULTY[state.diffKey];
+
+  // If cash negative, convert to debt up to maxDebt
+  if(state.cash < 0){
+    const needed = Math.abs(state.cash);
+    state.cash = 0;
+    state.debt += needed;
+  }
+
+  if(state.debt > diff.maxDebt){
+    state.alive = false;
+    return "Your debt exceeded what any local bank will tolerate.";
+  }
+  if(state.reputation <= 0){
+    state.alive = false;
+    return "Your reputation collapsed—nobody will trade with you.";
+  }
+  return null;
+}
+
+/** ---------------------------
+ *  UI Rendering
+ *  --------------------------- */
+function showSetup(){
+  document.getElementById("setupPanel").style.display = "";
+  document.getElementById("gamePanel").style.display = "none";
+}
+function showGame(){
+  document.getElementById("setupPanel").style.display = "none";
+  document.getElementById("gamePanel").style.display = "";
+}
+
+function renderStats(){
+  const biz = BUSINESS[state.bizKey];
+  const label = `${MONTHS[state.monthIndex]} ${state.year} • ${biz.name}`;
+  const netWorth = state.cash + (state.inventory * 5);
+
+  const statsRow = document.getElementById("statsRow");
+  statsRow.innerHTML = "";
+  const pills = [
+    `📍 ${label}`,
+    `💵 Cash: ${money(state.cash)}`,
+    `🏦 Debt: ${money(state.debt)}`,
+    `📦 Inventory: ${state.inventory}`,
+    `⭐ Reputation: ${state.reputation}`,
+    `📈 Net Worth: ${money(netWorth)}`
+  ];
+  for(const p of pills){
+    const d = document.createElement("div");
+    d.className = "pill";
+    d.textContent = p;
+    statsRow.appendChild(d);
+  }
+}
+
+function setStory(text){
+  document.getElementById("story").textContent = text;
+}
+
+function setChoices(btns){
+  const wrap = document.getElementById("choices");
+  wrap.innerHTML = "";
+  for(const b of btns){
+    const el = document.createElement("button");
+    if(b.primary) el.classList.add("primary");
+    if(b.danger) el.classList.add("danger");
+    el.textContent = b.label;
+    el.onclick = b.onClick;
+    wrap.appendChild(el);
+  }
+}
+
+function nextMonth(){
+  // Advance time
+  state.turn += 1;
+  state.monthIndex += 1;
+  if(state.monthIndex >= 12){ state.monthIndex = 0; state.year += 1; }
+}
+
+function playTurn(){
+  renderStats();
+  tiny("");
+
+  // Phase 1: monthly upkeep
+  const diff = DIFFICULTY[state.diffKey];
+  const eventMult = diff.eventMult;
+
+  const upkeep = monthlyExpenses();
+  const interest = interestPhase();
+  const sales = salesPhase();
+
+  // Phase 2: random event
+  const ev = pick(EVENTS);
+  state.lastEventText = ev.text;
+
+  setStory(
+`TURN ${state.turn} RESULTS
+
+Upkeep paid: ${money(-upkeep.expenses)}
+Interest: ${money(-interest)}
+Spoilage: -${upkeep.spoiled} inventory
+
+Sales:
+- Units sold: ${sales.unitsSold}
+- Revenue: ${money(sales.revenue)}
+- Materials/COGS: ${money(-sales.cogs)}
+
+EVENT:
+${ev.text}
+
+Choose an action:`
+  );
+
+  setChoices(ev.choices.map((c, idx) => ({
+    label: `${idx+1}) ${c.label}`,
+    onClick: () => applyEventChoice(ev, idx, eventMult)
+  })));
+}
+
+function applyEventChoice(ev, idx, mult){
+  const choice = ev.choices[idx];
+  const fx = choice.fx(mult) || {};
+
+  const cashDelta = Math.round(fx.cashDelta || 0);
+  const repDelta  = Math.round(fx.repDelta  || 0);
+  const invDelta  = Math.round(fx.invDelta  || 0);
+  const debtDelta = Math.round(fx.debtDelta || 0);
+  const demandDelta = fx.demandDelta || 0;
+
+  state.cash += cashDelta;
+  state.debt += debtDelta;
+  state.inventory = Math.max(0, state.inventory + invDelta);
+  state.reputation = clamp(state.reputation + repDelta, 0, 100);
+  state.demand = clamp(state.demand + demandDelta, 0.70, 1.35);
+
+  const lines = [];
+  if(cashDelta) lines.push(`Cash: ${cashDelta>0?"+":""}${money(cashDelta)}`);
+  if(debtDelta) lines.push(`Debt: ${debtDelta>0?"+":""}${money(debtDelta)}`);
+  if(invDelta) lines.push(`Inventory: ${invDelta>0?"+":""}${invDelta}`);
+  if(repDelta) lines.push(`Reputation: ${repDelta>0?"+":""}${repDelta}`);
+  if(demandDelta) lines.push(`Demand: ${demandDelta>0?"+":""}${demandDelta.toFixed(2)}`);
+
+  const outcome = lines.length ? lines.join(" • ") : "No measurable change.";
+
+  const gameOverReason = checkGameOver();
+
+  renderStats();
+
+  if(gameOverReason){
+    showEndScreen(false, gameOverReason);
+    return;
+  }
+
+  nextMonth();
+
+  setStory(
+`You chose: ${choice.label}
+
+Outcome: ${outcome}
+
+Ready to continue to the next month?`
+  );
+
+  setChoices([
+    { label: "Continue", primary:true, onClick: playTurn },
+    { label: "Save", onClick: save },
+  ]);
+
+  save(); // autosave after each choice
+}
+
+function showEndScreen(won, reason){
+  const finalScore = scoreGame(state);
+  const netWorth = state.cash + (state.inventory * 5);
+
+  setStory(
+`GAME OVER
+
+Reason: ${reason}
+
+Final Stats:
+- Team: ${state.teamName}
+- Business: ${BUSINESS[state.bizKey].name}
+- Turns survived: ${state.turn}
+- Cash: ${money(state.cash)}
+- Debt: ${money(state.debt)}
+- Reputation: ${state.reputation}
+- Net Worth: ${money(netWorth)}
+
+FINAL SCORE: ${finalScore}
+
+(If you want a class leaderboard, you can add a Google Form score submit button.)`
+  );
+
+  setChoices([
+    { label: "Restart", primary:true, onClick: () => { showSetup(); } },
+    { label: "Save", onClick: save },
+  ]);
+}
+
+/** ---------------------------
+ *  Buttons / Startup
+ *  --------------------------- */
+document.getElementById("btnStart").addEventListener("click", () => {
+  const name = document.getElementById("teamName").value.trim() || "Unnamed Team";
+  const biz = document.getElementById("bizType").value;
+  const diff = document.getElementById("difficulty").value;
+  state = newGame(name, biz, diff);
+  showGame();
+  save();
+  playTurn();
+});
+
+document.getElementById("btnLoad").addEventListener("click", () => {
+  const loaded = load();
+  if(!loaded){
+    alert("No save found on this device yet.");
+    return;
+  }
+  state = loaded;
+  showGame();
+  playTurn();
+});
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  resetSave();
+  alert("Save cleared.");
+});
+
+document.getElementById("btnSave").addEventListener("click", save);
+document.getElementById("btnQuit").addEventListener("click", () => {
+  showSetup();
+});
+
+</script>
+</body>
+</html>
