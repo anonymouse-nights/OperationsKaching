@@ -5,7 +5,6 @@
   <title>Town Trade !</title>
   <meta http-equiv="Cache-control" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -13,13 +12,11 @@
 
   <!-- =========================================================
        MAIN GAME WRAPPER
-       Everything in the game lives inside this one div.
        ========================================================= -->
   <div id="tab_town_trade">
 
     <!-- =========================================================
-         RIGHT PANEL
-         Shows ASCII art (business + town features)
+         RIGHT PANEL (ASCII)
          ========================================================= -->
     <div class="panelRight">
 
@@ -38,8 +35,7 @@
     </div>
 
     <!-- =========================================================
-         LEFT PANEL
-         Buttons, stats, story text, upgrades, and the log
+         LEFT PANEL (UI)
          ========================================================= -->
     <div class="panelLeft">
 
@@ -57,7 +53,15 @@
         <select id="roleSelect">
           <option value="general_store">General Store</option>
           <option value="blacksmith">Blacksmith</option>
-          <option value="boarding_house">Boarding House</option>
+          <option value="mill">Mill (Grain or Sawmill)</option>
+          <option value="tavern_inn">Tavern / Inn</option>
+          <option value="carpenter_builder">Carpenter / Builder</option>
+          <option value="butcher">Butcher</option>
+          <option value="baker">Baker</option>
+          <option value="stable_livery">Stable / Livery</option>
+          <option value="doctor_apothecary">Doctor / Apothecary</option>
+          <option value="church_meeting_house">Church / Meeting House</option>
+          <!-- NOTE: Boarding House removed until a role file exists -->
         </select>
 
         <button class="home_button" onclick="startGame();">Start game</button><br/>
@@ -75,15 +79,18 @@
       <!-- Story line -->
       <span id="story_line" class="hidden"></span><br/><br/>
 
-      <!-- Action buttons -->
+      <!-- IMPORTANT:
+           The new game.js dynamically renders an Actions block.
+           These legacy buttons are kept ONLY for backwards compatibility.
+           They will be hidden by the engine. -->
       <button class="home_button hidden" id="serveBtn" onclick="serveCustomer();">Serve a customer</button><br/>
-      <button class="home_button hidden" id="goodDeedBtn" onclick="offerDiscount();">Offer discount to a customer</button><br/>
+      <button class="home_button hidden" id="goodDeedBtn" onclick="doGoodDeed();">Offer discount / goodwill</button><br/>
       <button class="home_button hidden" id="advertiseBtn" onclick="advertise();">Run a small advertisement</button><br/>
       <button class="home_button hidden" id="loanBtn" onclick="takeLoan();">Take a small bank loan</button><br/>
       <button class="home_button hidden" id="repayBtn" onclick="repayLoan();">Repay some debt</button><br/>
       <br/>
 
-      <!-- Upgrades -->
+      <!-- Upgrades (legacy) -->
       <span id="upgrade_block" class="hidden">
         <b><span class="notice-yellow">Upgrades:</span></b><br/>
         <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
@@ -93,7 +100,7 @@
         <br/>
       </span>
 
-      <!-- Log -->
+      <!-- Dynamic Actions will render right above the log -->
       <pre id="log" class="hidden"></pre>
 
     </div>
@@ -101,19 +108,23 @@
     <br class="clear" />
   </div>
 
-  <!-- IMPORTANT: ASCII file must load BEFORE game.js -->
+  <!-- IMPORTANT: ASCII file must load BEFORE role files + game.js -->
   <script src="ascii.js"></script>
+
+  <!-- Roles -->
   <script src="roles/general_store.js"></script>
-<script src="roles/blacksmith.js"></script>
-<script src="roles/mill.js"></script>
-<script src="roles/tavern_inn.js"></script>
-<script src="roles/carpenter_builder.js"></script>
-<script src="roles/butcher.js"></script>
-<script src="roles/baker.js"></script>
-<script src="roles/stable_livery.js"></script>
-<script src="roles/doctor_apothecary.js"></script>
-<script src="roles/church_meeting_house.js"></script>
- <script src="game.js"></script>
-  
+  <script src="roles/blacksmith.js"></script>
+  <script src="roles/mill.js"></script>
+  <script src="roles/tavern_inn.js"></script>
+  <script src="roles/carpenter_builder.js"></script>
+  <script src="roles/butcher.js"></script>
+  <script src="roles/baker.js"></script>
+  <script src="roles/stable_livery.js"></script>
+  <script src="roles/doctor_apothecary.js"></script>
+  <script src="roles/church_meeting_house.js"></script>
+
+  <!-- Core -->
+  <script src="game.js"></script>
+
 </body>
 </html>
