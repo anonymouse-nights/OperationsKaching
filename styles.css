@@ -1,1 +1,65 @@
+/* =========================================================
+   GLOBAL PAGE STYLE
+   ========================================================= */
+body {
+  background-color: #FFFFFF;
+  overflow-y: scroll;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  color: #282e32;
+}
 
+pre {
+  font-family: monospace;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* =========================================================
+   LAYOUT (Left/Right panels like Candy Box)
+   ========================================================= */
+.panelRight { float: right; width: 420px; }
+.panelLeft { overflow: hidden; }
+.clear { clear: both; }
+
+/* =========================================================
+   SHOW / HIDE HELPERS
+   ========================================================= */
+.hidden { display: none; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+button {
+  border: 1px solid #464c54;
+  margin-bottom: 2px;
+  padding: 2px;
+  background-color: #ffffff;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+}
+button:hover { border: 2px solid #464c54; padding: 1px; }
+
+#restartButton { margin-left: 30px; }
+
+/* =========================================================
+   SMALL TEXT HELPERS
+   ========================================================= */
+.muted { color: #666; }
+.tiny { font-size: 12px; color: #666; }
+
+/* =========================================================
+   NOTICE HIGHLIGHTING (yellow/red messages)
+   ========================================================= */
+.notice-yellow { color: #b58900; font-weight: bold; }
+.notice-red { color: #b00020; font-weight: bold; }
+.upgrade_button { background-color: #f8f2b1; font-weight: bold; }
+
+/* =========================================================
+   OPTIONAL DARK MODE HOOKS (not active unless you add the class)
+   ========================================================= */
+.dark_mode { background-color: #111; color: #F1F1F1; }
+.dark_button { background-color: #171717; color: #9D9D9D !important; }
+.dark_button:disabled { background-color: #404040; }
+.dark_link { color: orange; }
+.dark_link:visited { color: chocolate; }
+.dark_table { border-color: #F1F1F1; }
