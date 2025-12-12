@@ -7,7 +7,7 @@
   <head>
     <title>Town Trade !</title>
     <meta http-equiv="Cache-control" content="no-cache" />
- <style type="text/css">
+    <style type="text/css">
 body {
     background-color: #FFFFFF;
     overflow-y:scroll;
@@ -77,6 +77,11 @@ pre {
 
 #restartButton { margin-left: 30px; }
 
+/* >>> NEW: noticeable event/upgrade highlighting <<< */
+.notice-yellow { color: #b58900; font-weight: bold; } /* readable yellow */
+.notice-red { color: #b00020; font-weight: bold; }    /* strong red */
+.upgrade_button { background-color:#f8f2b1; font-weight:bold; } /* candybox tab yellow */
+
 /* Dark mode hooks (optional later) */
 .dark_mode { background-color: #111; color: #F1F1F1; }
 .dark_button { background-color: #171717; color: #9D9D9D !important; }
@@ -89,15 +94,9 @@ pre {
 
   <body>
 
-    <!-- *************** -->
-    <!-- MAIN GAME "TAB" -->
-    <!-- *************** -->
-
     <div id="tab_town_trade">
 
-      <!-- *************************************** -->
       <!-- Right panel : town objects + ASCII stuff -->
-      <!-- *************************************** -->
       <div class="panelRight">
 
         <span id="town_object_cart" class="hidden">
@@ -164,9 +163,7 @@ pre {
 
       </div>
 
-      <!-- ***************************************** -->
-      <!-- Left panel : stats, buttons, narrative     -->
-      <!-- ***************************************** -->
+      <!-- Left panel : stats, buttons, narrative -->
       <div class="panelLeft">
 
         <button class="home_button" id="saveButton" onclick="saveGame();" style="visibility:visible">Save</button>
@@ -195,6 +192,7 @@ pre {
         <span id="stage_line" class="hidden"></span><br/>
         <span id="income_line" class="hidden"></span><br/><br/>
 
+        <!-- story_line will now be yellow/red when needed -->
         <span id="story_line" class="hidden"></span><br/><br/>
 
         <!-- Action buttons -->
@@ -207,11 +205,11 @@ pre {
 
         <!-- Upgrades (unlocked gradually) -->
         <span id="upgrade_block" class="hidden">
-          <b>Upgrades:</b><br/>
-          <button class="home_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
-          <button class="home_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
-          <button class="home_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
-          <button class="home_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
+          <b><span class="notice-yellow">Upgrades:</span></b><br/>
+          <button class="home_button upgrade_button hidden" id="upgradeToStallBtn" onclick="buyUpgrade('stall');">Upgrade: Cart → Stall</button><br/>
+          <button class="home_button upgrade_button hidden" id="upgradeToStoreBtn" onclick="buyUpgrade('storefront');">Upgrade: Stall → Storefront</button><br/>
+          <button class="home_button upgrade_button hidden" id="hireHelpBtn" onclick="buyUpgrade('helper');">Hire steady help</button><br/>
+          <button class="home_button upgrade_button hidden" id="unlockNewsBtn" onclick="buyUpgrade('newspaper');">Support the Town Gazette</button><br/>
           <br/>
         </span>
 
@@ -259,6 +257,9 @@ pre {
       var tickHandle = null;
       var lastTick = null;
 
+      // NEW: one-time highlight messages (event line control)
+      var notice = { text: "", type: "" }; // type: "yellow" | "red" | ""
+
       function newState(roleKey){
         return {
           roleKey: roleKey,
@@ -270,7 +271,7 @@ pre {
           // modifiers
           incomeBonus: 0,
           repGainBonus: 0,
-          demand: 1.0, // mild multiplier
+          demand: 1.0,
 
           // stats
           seconds: 0,
@@ -323,12 +324,17 @@ pre {
         $("log").textContent = s.logLines.join("\n");
       }
 
+      // NEW: set a noticeable event/unlock line
+      function setNotice(text, type){
+        notice.text = text || "";
+        notice.type = type || "";
+      }
+
       // ==============
       // Core mechanics
       // ==============
       function incomePerSecond(){
         var role = ROLES[s.roleKey];
-        // stage grows slowly
         var stageBonus = s.stage * 0.8;
         return (role.baseIncome + stageBonus + s.incomeBonus) * s.demand;
       }
@@ -352,9 +358,9 @@ pre {
         // passive earnings
         s.money += incomePerSecond();
 
-        // tiny drift: if reputation is high, demand inches up; if low, demand inches down
+        // tiny drift: demand
         if(s.seconds % 10 === 0){
-          var drift = (s.reputation - 50) / 5000; // very small
+          var drift = (s.reputation - 50) / 5000;
           s.demand = clamp(s.demand + drift, 0.85, 1.20);
         }
 
@@ -363,19 +369,21 @@ pre {
           var interest = Math.max(1, Math.floor(s.debt * 0.02));
           s.debt += interest;
           log("Bank interest increased your debt by " + money(interest) + ".");
+          if(s.debt >= 350){
+            setNotice("WARNING: Your debt is getting dangerous.", "red");
+          }
         }
 
-        // unlock progression based on money / rep
+        // unlock progression
         checkUnlocks();
 
-        // autosave occasionally
+        // autosave
         if(s.seconds % 15 === 0) saveGame(true);
 
         render();
       }
 
       function checkUnlocks(){
-        // Always show cart object once started
         s.unlocked.cart = true;
 
         // Stall unlock
@@ -385,6 +393,7 @@ pre {
           show("upgradeToStallBtn");
           $("town_object_stall").className = $("town_object_stall").className.replace("hidden","");
           log("You notice a better spot in town… maybe you can upgrade into a stall.");
+          setNotice("NEW UPGRADE AVAILABLE: Cart → Stall", "yellow");
         }
 
         // Storefront unlock
@@ -393,6 +402,7 @@ pre {
           show("upgradeToStoreBtn");
           $("town_object_storefront").className = $("town_object_storefront").className.replace("hidden","");
           log("A small storefront is up for rent. That would change everything.");
+          setNotice("NEW UPGRADE AVAILABLE: Stall → Storefront", "yellow");
         }
 
         // Newspaper unlock
@@ -401,6 +411,7 @@ pre {
           show("unlockNewsBtn");
           $("town_object_newspaper").className = $("town_object_newspaper").className.replace("hidden","");
           log("The Town Gazette offers to feature you (for a price).");
+          setNotice("NEW OPTION: Support the Town Gazette (advertising)", "yellow");
         }
 
         // Bank unlock
@@ -410,6 +421,7 @@ pre {
           show("repayBtn");
           $("town_object_bank").className = $("town_object_bank").className.replace("hidden","");
           log("The bank clerk offers you a loan. (Be careful.)");
+          setNotice("NEW RISK: Bank loans unlocked. Debt gains interest.", "red");
         }
 
         // Enable other action buttons after start
@@ -426,7 +438,6 @@ pre {
       function serveCustomer(){
         var role = ROLES[s.roleKey];
 
-        // good customer chance scales with reputation + stage
         var goodChance = clamp(0.25 + (s.reputation/100)*0.55 + (s.stage*0.05), 0.10, 0.90);
         var isGood = (Math.random() < goodChance);
 
@@ -441,6 +452,7 @@ pre {
           s.reputation = clamp(s.reputation + repGain, 0, 100);
 
           log("Good customer! +" + money(payout) + " and +" + repGain + " reputation.");
+          if(repGain >= 3) setNotice("Nice! Your reputation is climbing.", "yellow");
         } else {
           s.badServed += 1;
           var loss = Math.max(2, Math.floor(role.serveMoney * 0.6));
@@ -450,6 +462,7 @@ pre {
           s.reputation = clamp(s.reputation - repHit, 0, 100);
 
           log("Customer complaint… -" + money(loss) + " and -" + repHit + " reputation.");
+          setNotice("Careful: complaints hurt reputation (and long-term demand).", "red");
         }
 
         render();
@@ -457,10 +470,10 @@ pre {
       }
 
       function doGoodDeed(){
-        // trade money for reputation (ethics lesson)
         var cost = 12 + (s.stage*4);
         if(s.money < cost){
           log("You want to help, but you don't have enough cash right now.");
+          setNotice("Not enough money for that right now.", "red");
           return;
         }
         s.money -= cost;
@@ -469,6 +482,7 @@ pre {
         s.reputation = clamp(s.reputation + rep, 0, 100);
 
         log("You helped a customer fairly. -" + money(cost) + ", +" + rep + " reputation.");
+        setNotice("Good deed completed: reputation increased.", "yellow");
         render();
         saveGame(true);
       }
@@ -477,13 +491,14 @@ pre {
         var cost = 30 + (s.stage*10);
         if(s.money < cost){
           log("Advertising costs money. You don't have enough.");
+          setNotice("Not enough money to advertise.", "red");
           return;
         }
         s.money -= cost;
 
-        // advertising boosts demand temporarily
         s.demand = clamp(s.demand + 0.06, 0.85, 1.20);
         log("You ran an advertisement in the Gazette. Demand increased a bit.");
+        setNotice("Advertising worked: demand increased.", "yellow");
         render();
         saveGame(true);
       }
@@ -493,11 +508,11 @@ pre {
           log("No bank available yet.");
           return;
         }
-        // simple small loan
         var amount = 120;
         s.money += amount;
         s.debt += amount;
         log("You took a bank loan: +" + money(amount) + ". (Debt increases with interest.)");
+        setNotice("Loan taken: remember debt grows with interest.", "red");
         render();
         saveGame(true);
       }
@@ -505,16 +520,19 @@ pre {
       function repayLoan(){
         if(s.debt <= 0){
           log("You have no debt.");
+          setNotice("No debt to repay.", "yellow");
           return;
         }
         var pay = Math.min(80, s.debt);
         if(s.money < pay){
           log("You don't have enough money to repay right now.");
+          setNotice("Not enough money to repay debt.", "red");
           return;
         }
         s.money -= pay;
         s.debt -= pay;
         log("You repaid " + money(pay) + " of your debt.");
+        setNotice("Debt reduced. Nice.", "yellow");
         render();
         saveGame(true);
       }
@@ -522,12 +540,13 @@ pre {
       function buyUpgrade(which){
         if(which === "stall"){
           var cost = 120;
-          if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); return; }
+          if(s.money < cost){ log("You need " + money(cost) + " to upgrade."); setNotice("Need " + money(cost) + " for Cart → Stall.", "red"); return; }
           if(s.stage >= 1){ log("You already have a stall or better."); return; }
           s.money -= cost;
           s.stage = 1;
           s.incomeBonus += 1;
           log("Upgrade complete: Cart → Stall. Income increased.");
+          setNotice("Upgrade purchased: Cart → Stall", "yellow");
           render();
           saveGame(true);
           return;
@@ -535,13 +554,14 @@ pre {
 
         if(which === "storefront"){
           var cost2 = 480;
-          if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); return; }
+          if(s.money < cost2){ log("You need " + money(cost2) + " to upgrade."); setNotice("Need " + money(cost2) + " for Stall → Storefront.", "red"); return; }
           if(s.stage >= 2){ log("You already have a storefront."); return; }
-          if(s.stage < 1){ log("You need the stall first."); return; }
+          if(s.stage < 1){ log("You need the stall first."); setNotice("You need the Stall before the Storefront.", "red"); return; }
           s.money -= cost2;
           s.stage = 2;
           s.incomeBonus += 3;
           log("Upgrade complete: Stall → Storefront. Steady income jumped.");
+          setNotice("Upgrade purchased: Stall → Storefront", "yellow");
           render();
           saveGame(true);
           return;
@@ -549,11 +569,12 @@ pre {
 
         if(which === "helper"){
           var cost3 = 260;
-          if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); return; }
+          if(s.money < cost3){ log("You need " + money(cost3) + " to hire help."); setNotice("Need " + money(cost3) + " to hire help.", "red"); return; }
           s.money -= cost3;
           s.incomeBonus += 2;
           s.repGainBonus += 1;
           log("You hired steady help. Income +2/sec and customer service improves.");
+          setNotice("Upgrade purchased: Steady help hired.", "yellow");
           render();
           saveGame(true);
           return;
@@ -561,11 +582,12 @@ pre {
 
         if(which === "newspaper"){
           var cost4 = 200;
-          if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); return; }
+          if(s.money < cost4){ log("You need " + money(cost4) + " to support the Gazette."); setNotice("Need " + money(cost4) + " to support the Gazette.", "red"); return; }
           s.money -= cost4;
           s.unlocked.newspaper = true;
           s.reputation = clamp(s.reputation + 6, 0, 100);
           log("The Gazette features your business. Advertising unlocked.");
+          setNotice("Unlocked: advertising (Gazette).", "yellow");
           render();
           saveGame(true);
           return;
@@ -585,15 +607,25 @@ pre {
         $("income_line").innerHTML = "<b>Income:</b> " + incomePerSecond().toFixed(1) + " per second <span class='muted'>(Demand x" + s.demand.toFixed(2) + ")</span>";
 
         // story line evolves like Candy Box
+        var baseStory = "";
         if(s.seconds < 8){
-          $("story_line").innerHTML = role.intro;
+          baseStory = role.intro;
         } else if(s.stage === 0){
-          $("story_line").innerHTML = "The town is small, but every honest sale matters. Keep serving customers.";
+          baseStory = "The town is small, but every honest sale matters. Keep serving customers.";
         } else if(s.stage === 1){
-          $("story_line").innerHTML = "Your stall is drawing attention. Reputation will decide your long-term future here.";
+          baseStory = "Your stall is drawing attention. Reputation will decide your long-term future here.";
         } else {
-          $("story_line").innerHTML = "A storefront changes your standing. Bigger decisions are coming (laws, taxes, competition).";
+          baseStory = "A storefront changes your standing. Bigger decisions are coming (laws, taxes, competition).";
         }
+
+        // NEW: apply yellow/red notice on top of story
+        var noticeHtml = "";
+        if(notice.text){
+          if(notice.type === "yellow") noticeHtml = "<span class='notice-yellow'>" + notice.text + "</span><br/><br/>";
+          else if(notice.type === "red") noticeHtml = "<span class='notice-red'>" + notice.text + "</span><br/><br/>";
+          else noticeHtml = notice.text + "<br/><br/>";
+        }
+        $("story_line").innerHTML = noticeHtml + baseStory;
 
         // show objects based on stage/unlocks
         $("town_object_cart").className = s.unlocked.cart ? $("town_object_cart").className.replace("hidden","") : $("town_object_cart").className;
@@ -634,13 +666,12 @@ pre {
         var roleKey = $("roleSelect").value;
         s = newState(roleKey);
 
-        // hide setup block like Candy Box
         hide("setup_block");
 
-        // initial object visible
         $("town_object_cart").className = $("town_object_cart").className.replace("hidden","");
 
-        // show everything else
+        setNotice("Tip: Serve customers to earn money + reputation.", "yellow");
+
         render();
         log("You begin. The town watches.");
         startLoop();
@@ -669,6 +700,7 @@ pre {
           if(!raw){ alert("No save found on this device."); return; }
           s = JSON.parse(raw);
           hide("setup_block");
+          setNotice("Loaded save.", "yellow");
           render();
           log("Loaded save.");
           startLoop();
@@ -681,11 +713,9 @@ pre {
         if(!confirm("Restart game? This clears your save.")) return;
         localStorage.removeItem(SAVE_KEY);
         stopLoop();
-        // simple reload resets UI cleanly
         location.reload();
       }
 
-      // On open: hint if save exists
       (function init(){
         var raw = localStorage.getItem(SAVE_KEY);
         if(raw){
