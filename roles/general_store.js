@@ -1,7 +1,11 @@
 /* =========================================================
    roles/general_store.js  (HARD MODE / Oregon Trail vibe)
-   - Designed to "teach by losing" with story explanations
-   - Works with the CORE game.js you already have (no edits)
+   - "Learning by losing" with story explanations
+   - Adds directly:
+       1) Town migration
+       2) Seasons
+       3) Competitor storefront
+   - Includes price changing after first set (button + penalties)
    ========================================================= */
 
 (function(){
@@ -16,11 +20,10 @@
   // 1 in-game day = 60 seconds (easy to test)
   var DAY_SECONDS = 60;
 
-  // “Oregon Trail” punishing costs
+  // Hard upgrade costs
   var COST_CART_TO_STALL = 2200;
   var COST_STALL_TO_STOREFRONT = 16000;
 
-  // weekly costs hit hard
   var WEEK_DAYS = 7;
 
   function weeklyRent(stage){
@@ -33,27 +36,16 @@
   var GAZETTE_SUPPORT_COST = 260;
   function adCost(stage){ return 55 + stage * 35; }
 
-  // Bank
+  // Bank (you requested)
   var LOAN_CASH = 200;
-  var LOAN_DEBT = 220;          // debt starts at 10% extra
+  var LOAN_DEBT = 220;          // debt starts at +10% extra
   var REPAY_STEP = 10;
 
-  // Interest stays (you said you like it)
+  // Ongoing interest (you kept this)
   var INTEREST_EVERY_SECONDS = 12;
   var INTEREST_RATE = 0.02;
 
-  // Selling is NOT guaranteed: sometimes no customer shows up
-  function customerChance(st){
-    // reputation & demand matter, but never 100%
-    var rep = st.reputation || 0;       // can go negative
-    var base = 0.55;                   // still not guaranteed
-    var repBoost = clamp((rep / 100) * 0.25, -0.15, 0.18);
-    var demandBoost = clamp(((st.demand || 1) - 1) * 0.40, -0.12, 0.12);
-    var stageBoost = (st.stage === 0 ? 0 : (st.stage === 1 ? 0.05 : 0.08));
-    return clamp(base + repBoost + demandBoost + stageBoost, 0.30, 0.88);
-  }
-
-  // Random events (daily)
+  // Daily event chance
   var DAILY_EVENT_CHANCE = 0.30;
 
   // Pricing bands per item (harder)
@@ -73,37 +65,135 @@
   }
 
   /* =========================
-     Story / “economics” lines
+     Seasons (added)
+     =========================
+     60-day "year" loop:
+       0-14 Spring
+       15-29 Summer
+       30-44 Fall
+       45-59 Winter
+  */
+  function seasonName(dayCount){
+    var d = (dayCount % 60);
+    if(d < 15) return "Spring";
+    if(d < 30) return "Summer";
+    if(d < 45) return "Fall";
+    return "Winter";
+  }
+
+  function seasonDemandMultiplier(season){
+    if(season === "Spring") return 1.00;
+    if(season === "Summer") return 1.04;
+    if(season === "Fall")   return 0.98;
+    return 0.88; // Winter is brutal
+  }
+
+  function applySeasonSideEffects(st, api){
+    var it = getItem(st);
+    if(!it) return;
+
+    // Summer spoilage: apples can rot if you hoard too long
+    if(st.gs.season === "Summer" && it.key === "apples" && st.gs.stock >= 10 && Math.random() < 0.18){
+      var lost = Math.max(1, Math.floor(st.gs.stock * 0.20));
+      st.gs.stock = Math.max(0, st.gs.stock - lost);
+      api.log("Heat spoils some apples. -" + lost + " stock.");
+      api.setNotice("Spoilage: heat ruined stock.", "red");
+    }
+
+    // Winter slow street: sometimes fewer people show up
+    if(st.gs.season === "Winter" && Math.random() < 0.20){
+      st.demand = clamp(st.demand - 0.04, 0.70, 1.20);
+      api.log("Winter quiets the road. The street feels empty.");
+      api.setNotice("Winter slows the town.", "red");
+    }
+  }
+
+  /* =========================
+     Competitor storefront (added)
+     ========================= */
+  function maybeSpawnCompetitor(st, api){
+    if(st.gs.competitorActive) return;
+    if(st.stage < 1) return;              // no real competitor until you’re in the market
+    if(st.dayCount < 12) return;          // not early
+    if(Math.random() < 0.08){             // rare
+      st.gs.competitorActive = true;
+      st.gs.competitorPressure = 0.06 + Math.random() * 0.08; // 0.06–0.14 demand pressure
+      api.log("A new stall opens nearby. People compare prices now.");
+      api.setNotice("Competition arrived.", "red");
+    }
+  }
+
+  function competitorPenalty(st){
+    if(!st.gs.competitorActive) return 0;
+    var it = getItem(st);
+    if(!it) return 0;
+    var p = st.gs.sellPrice || 0;
+
+    // If you're overpriced vs fair, competitor hurts you harder
+    if(p >= it.fairMax + 2) return st.gs.competitorPressure * 1.4;
+    if(p > it.fairMax) return st.gs.competitorPressure * 1.1;
+    if(p >= it.fairMin && p <= it.fairMax) return st.gs.competitorPressure * 0.65;
+    if(p <= it.low) return st.gs.competitorPressure * 0.35; // cheap keeps people
+    return st.gs.competitorPressure * 0.85;
+  }
+
+  /* =========================
+     Customer chance
+     ========================= */
+  function customerChance(st){
+    var rep = st.reputation || 0;       // can go negative
+    var base = 0.55;
+    var repBoost = clamp((rep / 100) * 0.25, -0.15, 0.18);
+    var demandBoost = clamp(((st.demand || 1) - 1) * 0.40, -0.12, 0.12);
+    var stageBoost = (st.stage === 0 ? 0 : (st.stage === 1 ? 0.05 : 0.08));
+
+    // Season multiplier influences traffic
+    var seasonMul = seasonDemandMultiplier(st.gs.season || "Spring");
+    var seasonAdj = clamp((seasonMul - 1) * 0.55, -0.18, 0.10);
+
+    // Competitor reduces traffic chance
+    var comp = competitorPenalty(st);
+    var compAdj = clamp(-comp * 1.35, -0.22, 0);
+
+    return clamp(base + repBoost + demandBoost + stageBoost + seasonAdj + compAdj, 0.25, 0.88);
+  }
+
+  /* =========================
+     Story lines (short, in-world)
      ========================= */
   function storyLine(st){
     if(st.gs.dead) return "You’re done. The town moves on without you.";
 
     if(!st.gs.itemKey) return "A cart with nothing to sell is just wood and silence.";
 
+    var season = st.gs.season || "Spring";
+    var town = "Town #" + (st.gs.townIndex || 1);
+
     if(st.stage === 0){
-      return "You’re a cart on a dusty corner. Every price you set teaches the town what you’re worth.";
+      return town + " • " + season + ": You’re a cart on a dusty corner. Every price you set teaches the town what you’re worth.";
     }
     if(st.stage === 1){
-      return "A stall means more eyes—and more bills. Miss rent and you’ll feel it in the way people look away.";
+      return town + " • " + season + ": A stall means more eyes—and more bills. Miss rent and you’ll feel it in the way people look away.";
     }
-    return "A storefront makes you real. Real businesses bleed slowly if they grow careless.";
+    return town + " • " + season + ": A storefront makes you real. Real businesses bleed slowly if they grow careless.";
   }
 
-  function econHintOneLiner(st, key){
-    // keep it short, like Oregon Trail
+  function econHintOneLiner(key){
     var lines = {
       too_high: "People stop coming when they feel squeezed.",
       too_low: "Crowds don’t pay your bills—profit does.",
       no_stock: "Empty shelves make customers forget you.",
       cashflow: "You’re not broke on paper. You’re broke in timing.",
       rent: "Fixed costs don’t care if it was a slow week.",
-      debt: "Debt keeps you alive… then starts eating."
+      debt: "Debt keeps you alive… then starts eating.",
+      compete: "Competition punishes laziness and bad pricing.",
+      travel: "A new town can save you—or finish you."
     };
     return lines[key] || "";
   }
 
   /* =========================
-     Popups (minimal, immersive)
+     Popups
      ========================= */
   function pickItemFlow(st, api){
     var text = "Choose what your cart will sell:\n\n";
@@ -134,7 +224,6 @@
     st.gs.itemKey = item.key;
     st.gs.itemName = item.name;
     st.gs.unitCost = item.unitCost;
-
     st.gs.stock = item.startStock;
 
     api.log("You paid " + api.money(item.buyIn) + " to get started selling " + item.name + ".");
@@ -146,9 +235,9 @@
     var it = getItem(st);
     if(!it) return false;
 
-    // price-change friction (trust)
+    // Price-change trust penalty (hard)
     if(isChange){
-      // only once per day without penalty
+      // only one “free” change per day
       if(st.gs.lastPriceChangeDay === st.dayCount){
         st.reputation = api.clamp(st.reputation - 2, -100, 100);
         api.log("You changed prices again today. People notice.");
@@ -175,6 +264,7 @@
 
     st.gs.sellPrice = p;
     api.log("You set your price: " + api.money(p) + ".");
+    if(isChange) api.setNotice("Price updated.", "yellow");
     return true;
   }
 
@@ -193,14 +283,12 @@
       return;
     }
 
-    // cap discount to price
     var maxD = Math.max(0, (st.gs.sellPrice || d));
     d = Math.min(d, maxD);
 
     st.gs.nextDiscount = d;
 
-    // Your requested baseline: “base end $5, +2 rep”
-    // Here: reputation is +2 always, and the discount applies to next sale
+    // Your requested change: base reputation bump +2 (not huge)
     st.reputation = api.clamp(st.reputation + 2, -100, 100);
 
     api.log("You’ll discount the next sale by " + api.money(d) + ". Reputation +2.");
@@ -208,7 +296,7 @@
   }
 
   /* =========================
-     Supply shipments (scarcity)
+     Restock shipments (scarcity)
      ========================= */
   function restockFlow(st, api){
     if(!st.gs.itemKey){
@@ -234,13 +322,11 @@
       return;
     }
 
-    // shipping risk: delivery delay + occasional spoilage/shortage
     var baseDays = 1;
     var delay = 0;
     if(Math.random() < 0.30) delay += 1;
     if(Math.random() < 0.12) delay += 2;
 
-    // shortages: you pay for qty, but might receive less (rare)
     var shortage = 0;
     if(Math.random() < 0.10){
       shortage = Math.max(1, Math.floor(qty * 0.20));
@@ -267,8 +353,7 @@
     });
 
     api.log("You paid " + api.money(total) + " for a supply order. Wagon ETA: day " + arrivalDay + ".");
-    if(delay > 0) api.setNotice("Supply wagon might be late.", "red");
-    else api.setNotice("Supply wagon on the way.", "yellow");
+    api.setNotice((delay > 0) ? "Supply wagon might be late." : "Supply wagon on the way.", delay > 0 ? "red" : "yellow");
   }
 
   function processShipments(st, api){
@@ -283,10 +368,8 @@
     }
     if(arrived.length === 0) return;
 
-    // remove arrived
     st.gs.shipments = st.gs.shipments.filter(function(sh){ return sh.arrivalDay > st.dayCount; });
 
-    // apply deliveries
     for(var j=0;j<arrived.length;j++){
       var sh2 = arrived[j];
       st.gs.stock += sh2.deliveredQty;
@@ -302,179 +385,48 @@
   }
 
   /* =========================
-     Hard daily events
-     (short, story-driven)
+     Daily events (short)
      ========================= */
   function dailyEvent(st, api){
-    var roll = Math.random();
-
-    // events are more likely to happen once you grow
-    var stage = st.stage;
-
     var events = [
-      {
-        name: "Cold snap",
-        apply: function(){
-          st.demand = api.clamp(st.demand - 0.06, 0.70, 1.20);
-          api.log("A cold snap hits. Folks stay home. The street is quieter.");
-          api.setNotice("The town is quieter today.", "red");
+      function(){
+        st.demand = api.clamp(st.demand - 0.06, 0.70, 1.20);
+        api.log("A cold snap hits. Folks stay home. The street is quieter.");
+        api.setNotice("The town is quieter today.", "red");
+      },
+      function(){
+        var it = getItem(st);
+        if(it && st.gs.sellPrice >= it.fairMax){
+          st.demand = api.clamp(st.demand - 0.08, 0.70, 1.20);
+          st.reputation = api.clamp(st.reputation - 1, -100, 100);
+          api.log("A traveling trader sells cheaper. People compare you.");
+          api.setNotice("Competition stings if you're pricey.", "red");
+        } else {
+          api.log("A traveling trader passes through. You hold your ground.");
+          api.setNotice("", "");
         }
       },
-      {
-        name: "Traveling trader undercuts you",
-        apply: function(){
-          // demand falls if your price is high
-          var it = getItem(st);
-          if(it && st.gs.sellPrice >= it.fairMax){
-            st.demand = api.clamp(st.demand - 0.08, 0.70, 1.20);
-            st.reputation = api.clamp(st.reputation - 1, -100, 100);
-            api.log("A traveling trader sells cheaper. People compare you.");
-            api.setNotice("Competition stings if you're pricey.", "red");
-          } else {
-            api.log("A traveling trader passes through. You hold your ground.");
-            api.setNotice("Competition passed through.", "yellow");
-          }
-        }
+      function(){
+        st.reputation = api.clamp(st.reputation + 2, -100, 100);
+        st.demand = api.clamp(st.demand + 0.05, 0.70, 1.20);
+        api.log("Word spreads: you’re fair. More faces drift your way.");
+        api.setNotice("Word spreads about you.", "yellow");
       },
-      {
-        name: "Good rumor",
-        apply: function(){
-          st.reputation = api.clamp(st.reputation + 2, -100, 100);
-          st.demand = api.clamp(st.demand + 0.05, 0.70, 1.20);
-          api.log("Word spreads: you’re fair. More faces drift your way.");
-          api.setNotice("Word spreads about you.", "yellow");
-        }
-      },
-      {
-        name: "Bad rumor",
-        apply: function(){
-          st.reputation = api.clamp(st.reputation - 2, -100, 100);
-          st.demand = api.clamp(st.demand - 0.05, 0.70, 1.20);
-          api.log("Someone says you gouge. People hesitate at your cart.");
-          api.setNotice("Rumors hurt.", "red");
-        }
-      },
-      {
-        name: "Market inspector",
-        apply: function(){
-          if(stage >= 1){
-            var fee = 35 + stage * 20;
-            if(st.money >= fee){
-              st.money -= fee;
-              api.log("A market inspector collects fees. -" + api.money(fee) + ".");
-              api.setNotice("Fees collected.", "red");
-            } else {
-              st.reputation = api.clamp(st.reputation - 3, -100, 100);
-              api.log("Inspector finds you short. People notice the argument.");
-              api.setNotice("Being broke looks bad.", "red");
-            }
-          } else {
-            api.log("An inspector strolls by. You’re small enough to ignore.");
-            api.setNotice("", "");
-          }
-        }
+      function(){
+        st.reputation = api.clamp(st.reputation - 2, -100, 100);
+        st.demand = api.clamp(st.demand - 0.05, 0.70, 1.20);
+        api.log("Someone says you gouge. People hesitate at your cart.");
+        api.setNotice("Rumors hurt.", "red");
       }
     ];
 
-    // Choose an event with a simple random index
     var ev = events[Math.floor(Math.random() * events.length)];
-    ev.apply();
+    ev();
   }
 
   /* =========================
-     Selling (punishing)
+     Talk events (light)
      ========================= */
-  function sellOnce(st, api){
-    if(st.gs.dead) return;
-
-    if(!st.gs.itemKey){
-      api.setNotice("Pick an item to sell first.", "red");
-      return;
-    }
-
-    // sometimes nobody shows up
-    if(Math.random() > customerChance(st)){
-      api.log("You wait. Nobody buys. The street keeps moving.");
-      api.setNotice("No customer right now.", "red");
-      return;
-    }
-
-    if(st.gs.stock <= 0){
-      api.log("A customer looks… then leaves. You have nothing to sell.");
-      api.setNotice(econHintOneLiner(st, "no_stock"), "red");
-      return;
-    }
-
-    var it = getItem(st);
-    var price = st.gs.sellPrice || 0;
-    if(price <= 0){
-      api.setNotice("Set a price first.", "red");
-      return;
-    }
-
-    // apply queued discount (one sale)
-    var discount = st.gs.nextDiscount || 0;
-    st.gs.nextDiscount = 0;
-
-    var finalPrice = Math.max(0, price - discount);
-
-    // sell 1 unit
-    st.gs.stock -= 1;
-    st.money += finalPrice;
-    st.gs.totalSales += 1;
-
-    // Price reaction
-    var repDelta = 0;
-
-    if(it){
-      if(price >= it.high){
-        // too high: guaranteed anger
-        repDelta = -2;
-        st.demand = api.clamp(st.demand - 0.03, 0.70, 1.20);
-        api.log("Customer scowls at the price and walks off angry.");
-        api.setNotice(econHintOneLiner(st, "too_high"), "red");
-      } else if(price <= it.low){
-        // too low: people love you, but you bleed growth
-        repDelta = +3;
-        api.log("Customer grins. “That’s cheap.” Word travels fast.");
-        api.setNotice(econHintOneLiner(st, "too_low"), "yellow");
-      } else if(price >= it.fairMin && price <= it.fairMax){
-        // fair: small random + occasional talk event
-        repDelta = (Math.random() < 0.55) ? 1 : 0;
-
-        // talk event chance
-        if(Math.random() < 0.20){
-          var talk = talkEvent(api);
-          st.reputation = api.clamp(st.reputation + talk, -100, 100);
-          if(talk > 0){
-            api.log("You handled it well. +" + talk + " reputation.");
-            api.setNotice("You talk your way through it.", "yellow");
-          } else {
-            api.log("That went badly. " + talk + " reputation.");
-            api.setNotice("Your words cost you.", "red");
-          }
-          return;
-        }
-      } else {
-        // slightly off: mild negatives sometimes
-        repDelta = (Math.random() < 0.50) ? -1 : 0;
-      }
-    }
-
-    // Apply rep delta
-    if(repDelta !== 0){
-      st.reputation = api.clamp(st.reputation + repDelta, -100, 100);
-      api.log("Reputation " + (repDelta > 0 ? "improved" : "dropped") + " (" + repDelta + ").");
-    } else {
-      api.log("Sale completed. No strong reaction.");
-    }
-
-    // cashflow warnings
-    if(it && st.money < (st.gs.unitCost * 8) && st.gs.stock <= 2){
-      api.setNotice(econHintOneLiner(st, "cashflow"), "red");
-    }
-  }
-
   function talkEvent(api){
     var events = [
       {
@@ -504,20 +456,6 @@
         bad: "He says your name loud enough for others to hear: “Greedy.”",
         repGood: 2,
         repBad: -2
-      },
-      {
-        who: "A regular",
-        open: "“Can you hold one for me till tomorrow?”",
-        choices: [
-          "1) “Yeah. I’ll set it aside.”",
-          "2) “No holds.”",
-          "3) “Double the price and maybe.”"
-        ],
-        correct: "1",
-        good: "They smile. “You’re good people.”",
-        bad: "They walk off, annoyed: “Guess I’ll go elsewhere.”",
-        repGood: 2,
-        repBad: -1
       }
     ];
 
@@ -542,6 +480,94 @@
   }
 
   /* =========================
+     Selling (punishing)
+     ========================= */
+  function sellOnce(st, api){
+    if(st.gs.dead) return;
+
+    if(!st.gs.itemKey){
+      api.setNotice("Pick an item to sell first.", "red");
+      return;
+    }
+
+    // sometimes nobody shows up
+    if(Math.random() > customerChance(st)){
+      api.log("You wait. Nobody buys. The street keeps moving.");
+      api.setNotice("No customer right now.", "red");
+      return;
+    }
+
+    if(st.gs.stock <= 0){
+      api.log("A customer looks… then leaves. You have nothing to sell.");
+      api.setNotice(econHintOneLiner("no_stock"), "red");
+      return;
+    }
+
+    var it = getItem(st);
+    var price = st.gs.sellPrice || 0;
+    if(price <= 0){
+      api.setNotice("Set a price first.", "red");
+      return;
+    }
+
+    // apply queued discount (one sale)
+    var discount = st.gs.nextDiscount || 0;
+    st.gs.nextDiscount = 0;
+
+    var finalPrice = Math.max(0, price - discount);
+
+    // sell 1 unit
+    st.gs.stock -= 1;
+    st.money += finalPrice;
+    st.gs.totalSales += 1;
+
+    var repDelta = 0;
+
+    if(it){
+      if(price >= it.high){
+        repDelta = -2;
+        st.demand = api.clamp(st.demand - 0.03, 0.70, 1.20);
+        api.log("Customer scowls at the price and walks off angry.");
+        api.setNotice(econHintOneLiner("too_high"), "red");
+      } else if(price <= it.low){
+        repDelta = +3;
+        api.log("Customer grins. “That’s cheap.” Word travels fast.");
+        api.setNotice(econHintOneLiner("too_low"), "yellow");
+      } else if(price >= it.fairMin && price <= it.fairMax){
+        repDelta = (Math.random() < 0.55) ? 1 : 0;
+
+        if(Math.random() < 0.20){
+          var talk = talkEvent(api);
+          st.reputation = api.clamp(st.reputation + talk, -100, 100);
+          api.log(talk > 0 ? ("You handled it well. +" + talk + " reputation.")
+                           : ("That went badly. " + talk + " reputation."));
+          api.setNotice(talk > 0 ? "You talk your way through it." : "Your words cost you.", talk > 0 ? "yellow" : "red");
+          return;
+        }
+      } else {
+        repDelta = (Math.random() < 0.50) ? -1 : 0;
+      }
+    }
+
+    if(repDelta !== 0){
+      st.reputation = api.clamp(st.reputation + repDelta, -100, 100);
+      api.log("Reputation " + (repDelta > 0 ? "improved" : "dropped") + " (" + repDelta + ").");
+    } else {
+      api.log("Sale completed. No strong reaction.");
+    }
+
+    // Competitor sting callout
+    if(st.gs.competitorActive && Math.random() < 0.25){
+      api.setNotice(econHintOneLiner("compete"), "red");
+    }
+
+    // cashflow warning
+    if(it && st.money < (st.gs.unitCost * 8) && st.gs.stock <= 2){
+      api.setNotice(econHintOneLiner("cashflow"), "red");
+    }
+  }
+
+  /* =========================
      Bank
      ========================= */
   function takeLoan(st, api){
@@ -553,7 +579,7 @@
     st.money += LOAN_CASH;
     st.debt += LOAN_DEBT;
     api.log("You take a loan: +" + api.money(LOAN_CASH) + ". Debt + " + api.money(LOAN_DEBT) + ".");
-    api.setNotice(econHintOneLiner(st, "debt"), "red");
+    api.setNotice(econHintOneLiner("debt"), "red");
   }
 
   function repayDebt(st, api){
@@ -633,13 +659,10 @@
   }
 
   /* =========================
-     Upgrades (hard)
+     Upgrades
      ========================= */
   function upgradeToStall(st, api){
-    if(st.stage >= 1){
-      api.log("You already have a stall (or better).");
-      return;
-    }
+    if(st.stage >= 1){ api.log("You already have a stall (or better)."); return; }
     if(st.money < COST_CART_TO_STALL){
       api.log("You need " + api.money(COST_CART_TO_STALL) + " for a stall permit + setup.");
       api.setNotice("Not enough money to upgrade.", "red");
@@ -648,8 +671,6 @@
 
     st.money -= COST_CART_TO_STALL;
     st.stage = 1;
-
-    // rent schedule
     st.gs.nextRentDueDay = st.dayCount + WEEK_DAYS;
     st.gs.missedRent = 0;
 
@@ -658,15 +679,8 @@
   }
 
   function upgradeToStorefront(st, api){
-    if(st.stage >= 2){
-      api.log("You already have a storefront.");
-      return;
-    }
-    if(st.stage < 1){
-      api.log("You need a stall first.");
-      api.setNotice("Need a stall first.", "red");
-      return;
-    }
+    if(st.stage >= 2){ api.log("You already have a storefront."); return; }
+    if(st.stage < 1){ api.log("You need a stall first."); api.setNotice("Need a stall first.", "red"); return; }
     if(st.money < COST_STALL_TO_STOREFRONT){
       api.log("You need " + api.money(COST_STALL_TO_STOREFRONT) + " to lease + setup a storefront.");
       api.setNotice("Not enough money to upgrade.", "red");
@@ -675,7 +689,6 @@
 
     st.money -= COST_STALL_TO_STOREFRONT;
     st.stage = 2;
-
     st.gs.nextRentDueDay = st.dayCount + WEEK_DAYS;
     st.gs.missedRent = 0;
 
@@ -689,16 +702,14 @@
   function payRentIfDue(st, api){
     var rent = weeklyRent(st.stage);
     if(rent <= 0) return;
-
     if(st.dayCount < st.gs.nextRentDueDay) return;
 
-    // due now
     if(st.money >= rent){
       st.money -= rent;
       st.gs.missedRent = 0;
       st.gs.nextRentDueDay += WEEK_DAYS;
       api.log("Rent paid: -" + api.money(rent) + ".");
-      api.setNotice(econHintOneLiner(st, "rent"), "yellow");
+      api.setNotice(econHintOneLiner("rent"), "yellow");
     } else {
       st.gs.missedRent += 1;
       st.reputation = api.clamp(st.reputation - 3, -100, 100);
@@ -708,7 +719,6 @@
       api.log("You miss rent. The market board makes a note.");
       api.setNotice("You missed rent. Things get colder.", "red");
 
-      // hard fail after 2 missed rents
       if(st.gs.missedRent >= 2){
         gameOver(st, api, "The market board revokes your permit.\nYour stall is cleared out before sunrise.");
       }
@@ -716,7 +726,6 @@
   }
 
   function bankruptcyCheck(st, api){
-    // If you cannot sell (no stock), no cash, and no shipments coming -> done
     var hasIncoming = (st.gs.shipments && st.gs.shipments.length > 0);
     if(st.money <= 0 && st.gs.stock <= 0 && !hasIncoming){
       gameOver(st, api, "You sit behind an empty cart with empty pockets.\nNo supplier will extend you credit.\nYou leave town quietly.");
@@ -731,10 +740,8 @@
     api.log("END: " + msg.replace(/\n/g, " "));
     api.setNotice("You failed. Try again smarter.", "red");
 
-    // Oregon Trail-style end screen
     setTimeout(function(){
       alert(msg + "\n\n(Your run is over.)");
-      // Fast restart prompt
       if(confirm("Restart from the beginning?")){
         localStorage.removeItem("townTrade_save_core_v1");
         location.reload();
@@ -743,31 +750,93 @@
   }
 
   /* =========================
-     Unlocks (later + harder)
+     Town migration (added)
+     ========================= */
+  function canMigrate(st){
+    // You can migrate once you’ve survived a bit OR if competition is crushing you
+    if(st.dayCount >= 10) return true;
+    if(st.gs.competitorActive) return true;
+    return false;
+  }
+
+  function migrateTown(st, api){
+    if(st.gs.dead) return;
+    if(!canMigrate(st)){
+      api.log("You’re not ready to move towns yet.");
+      api.setNotice("Too early to migrate.", "red");
+      return;
+    }
+
+    var cost = 90 + (st.stage * 140); // travel cost increases with setup size
+    var warn =
+      "Move to a new town?\n\n" +
+      "- Travel cost: " + api.money(cost) + "\n" +
+      "- You will lose some stock (damaged/left behind)\n" +
+      "- Shipments are cancelled\n" +
+      "- Reputation resets partially (new faces)\n\n" +
+      "This can save you… or finish you.\n";
+
+    if(!confirm(warn)) return;
+
+    if(st.money < cost){
+      api.log("You can't afford the travel. Need " + api.money(cost) + ".");
+      api.setNotice("Not enough money to travel.", "red");
+      return;
+    }
+
+    st.money -= cost;
+
+    // Lose stock to travel
+    var lost = Math.max(0, Math.floor((st.gs.stock || 0) * (0.35 + Math.random()*0.25)));
+    st.gs.stock = Math.max(0, (st.gs.stock || 0) - lost);
+
+    // Cancel shipments
+    st.gs.shipments = [];
+
+    // Reputation partially resets (new people)
+    st.reputation = Math.floor((st.reputation || 0) * 0.35);
+
+    // Reset demand to a “new town” baseline
+    st.demand = 0.92 + Math.random()*0.12;
+
+    // Reset competitor (new town, new market)
+    st.gs.competitorActive = false;
+    st.gs.competitorPressure = 0;
+
+    // Advance days (travel time)
+    var travelDays = 1 + (Math.random() < 0.35 ? 1 : 0); // 1–2 days
+    st.dayCount += travelDays;
+
+    // New town index
+    st.gs.townIndex = (st.gs.townIndex || 1) + 1;
+
+    api.log("You leave before dawn. Wheels creak. Days pass.");
+    api.log("You arrive in Town #" + st.gs.townIndex + ". New eyes. New judgments.");
+    api.setNotice(econHintOneLiner("travel"), "yellow");
+  }
+
+  /* =========================
+     Unlocks
      ========================= */
   function unlocks(st, api){
-    // Stall “available” after proving you can sell + keep some money
     if(!st.unlocked.stall && st.gs.totalSales >= 35 && st.money >= 500){
       st.unlocked.stall = true;
       api.log("A market permit becomes possible… if you can afford it.");
       api.setNotice("NEW UPGRADE: Cart → Stall", "yellow");
     }
 
-    // Storefront after real performance
     if(!st.unlocked.storefront && st.stage >= 1 && st.gs.totalSales >= 180 && st.reputation >= 8 && st.money >= 2600){
       st.unlocked.storefront = true;
       api.log("A storefront lease is posted. The numbers are ugly.");
       api.setNotice("NEW UPGRADE: Stall → Storefront", "yellow");
     }
 
-    // Gazette offer after stall + some rep
     if(!st.unlocked.gazetteOffer && st.stage >= 1 && st.reputation >= 6){
       st.unlocked.gazetteOffer = true;
       api.log("The Town Gazette offers a feature… for a fee.");
       api.setNotice("NEW OPTION: Support the Gazette", "yellow");
     }
 
-    // Bank later (do not show early)
     if(!st.unlocked.bank && st.stage >= 1 && st.money >= 800){
       st.unlocked.bank = true;
       api.log("The bank clerk finally looks up when you walk in.");
@@ -781,25 +850,38 @@
   function onNewDay(st, api){
     st.dayCount += 1;
 
+    // season update
+    st.gs.season = seasonName(st.dayCount);
+
     // shipments arrive in the morning
     processShipments(st, api);
 
     // rent check
     payRentIfDue(st, api);
 
+    // daily season side effects
+    applySeasonSideEffects(st, api);
+
     // daily random event (not every day)
     if(Math.random() < DAILY_EVENT_CHANCE){
       dailyEvent(st, api);
     }
 
-    // tiny demand drift based on reputation (slow, but real)
+    // competitor might appear later
+    maybeSpawnCompetitor(st, api);
+
+    // season demand multiplier influences your effective demand baseline
+    var mul = seasonDemandMultiplier(st.gs.season);
+    st.demand = clamp(st.demand * (0.985 + (mul - 1) * 0.35), 0.70, 1.20);
+
+    // tiny drift based on reputation (slow, but real)
     var rep = st.reputation || 0;
     var drift = (rep / 100) * 0.015;
     st.demand = api.clamp((st.demand || 1) + drift, 0.70, 1.20);
 
-    // soft daily summary (one sentence)
+    // soft daily summary
     if(st.dayCount > 1){
-      api.log("Day " + st.dayCount + ": Cash " + api.money(st.money) + ", Stock " + st.gs.stock + ", Rep " + st.reputation + ".");
+      api.log("Day " + st.dayCount + " (" + st.gs.season + "): Cash " + api.money(st.money) + ", Stock " + st.gs.stock + ", Rep " + st.reputation + ".");
     }
 
     bankruptcyCheck(st, api);
@@ -809,7 +891,7 @@
      UI injection (no index edits)
      ========================= */
   function ensureExtraButtons(st, api){
-    // Add: Set Price, Restock
+    // Set / Change price
     if(!api.$("setPriceBtn")){
       var anchor = api.$("serveBtn") || api.$("goodDeedBtn");
       if(anchor && anchor.parentNode){
@@ -822,6 +904,7 @@
             api.setNotice("Pick an item first.", "red");
             return;
           }
+          // price can be changed ANY time after first set
           setPriceFlow(st, api, true);
         };
         anchor.parentNode.insertBefore(b1, anchor);
@@ -829,6 +912,7 @@
       }
     }
 
+    // Restock
     if(!api.$("restockBtn")){
       var anchor2 = api.$("serveBtn");
       if(anchor2 && anchor2.parentNode){
@@ -839,10 +923,24 @@
           if(st.gs.dead) return;
           restockFlow(st, api);
         };
-        // after sell button
         anchor2.parentNode.insertBefore(document.createElement("br"), anchor2.nextSibling);
         anchor2.parentNode.insertBefore(b2, anchor2.nextSibling);
         anchor2.parentNode.insertBefore(document.createElement("br"), anchor2.nextSibling);
+      }
+    }
+
+    // Migrate Town (added)
+    if(!api.$("migrateBtn")){
+      var anchor3 = api.$("restockBtn") || api.$("serveBtn");
+      if(anchor3 && anchor3.parentNode){
+        var b3 = document.createElement("button");
+        b3.id = "migrateBtn";
+        b3.className = "home_button";
+        b3.onclick = function(){
+          migrateTown(st, api);
+        };
+        anchor3.parentNode.insertBefore(b3, anchor3.nextSibling);
+        anchor3.parentNode.insertBefore(document.createElement("br"), anchor3.nextSibling);
       }
     }
   }
@@ -850,8 +948,9 @@
   function updateButtonLabels(st, api){
     var sellBtn = api.$("serveBtn");
     var discBtn = api.$("goodDeedBtn");
-    var setBtn = api.$("setPriceBtn");
+    var setBtn  = api.$("setPriceBtn");
     var restBtn = api.$("restockBtn");
+    var migBtn  = api.$("migrateBtn");
 
     if(sellBtn){
       sellBtn.textContent = st.gs.itemName ? ("Sell (" + st.gs.itemName + ")") : "Sell";
@@ -863,13 +962,13 @@
       setBtn.textContent = "Set / Change price";
     }
     if(restBtn){
-      restBtn.textContent = st.gs.itemName ? ("Order stock (" + (window.TT && TT.money ? "" : "") + ")") : "Order stock";
-      // keep restock label useful
-      if(st.gs.itemName){
-        restBtn.textContent = "Order stock (" + (api.money(st.gs.unitCost) + " each") + ")";
-      } else {
-        restBtn.textContent = "Order stock";
-      }
+      restBtn.textContent = st.gs.itemName ? ("Order stock (" + api.money(st.gs.unitCost) + " each)") : "Order stock";
+    }
+    if(migBtn){
+      var travelCost = 90 + (st.stage * 140);
+      migBtn.textContent = "Move to a new town (" + api.money(travelCost) + ")";
+      // hide it early to keep Oregon Trail vibe
+      migBtn.style.display = canMigrate(st) ? "" : "none";
     }
 
     if(api.$("loanBtn")) api.$("loanBtn").textContent = "Take a small bank loan (" + api.money(LOAN_CASH) + ")";
@@ -881,7 +980,7 @@
   }
 
   /* =========================
-     Module Registration
+     Module registration
      ========================= */
   window.TT_ROLES["general_store"] = {
     meta: {
@@ -925,7 +1024,14 @@
         gazetteSupported: false,
 
         nextRentDueDay: WEEK_DAYS,
-        missedRent: 0
+        missedRent: 0,
+
+        // added systems
+        season: "Spring",
+        townIndex: 1,
+
+        competitorActive: false,
+        competitorPressure: 0
       };
     },
 
@@ -945,26 +1051,25 @@
       } else {
         api.setNotice("Ready. Try your first sale.", "yellow");
       }
+
+      // Make price changing obvious
+      api.log("You can change price anytime using: Set / Change price (but flipping often hurts trust).");
     },
 
     tick: function(st, api){
       if(st.gs.dead) return;
 
-      // day tick
       if(st.seconds % DAY_SECONDS === 0){
         onNewDay(st, api);
       }
 
-      // interest tick
       applyInterest(st, api);
-
-      // unlock checks
       unlocks(st, api);
 
-      // small drift: reputational gravity
+      // slow drift
       if(st.seconds % 10 === 0){
         var rep = st.reputation || 0;
-        var drift = (rep / 100) / 90; // slow
+        var drift = (rep / 100) / 90;
         st.demand = api.clamp((st.demand || 1) + drift, 0.70, 1.20);
       }
 
@@ -972,15 +1077,12 @@
     },
 
     buttons: function(st, api){
-      // Only show what becomes available (Oregon Trail style)
       return {
         serve: !!st.gs.itemKey && !st.gs.dead,
         discount: !!st.gs.itemKey && !st.gs.dead,
 
-        // ads only after paying Gazette
         advertise: (st.gs.gazetteSupported === true) && !st.gs.dead,
 
-        // bank only after unlock
         loan: (st.unlocked.bank === true) && !st.gs.dead,
         repay: (st.unlocked.bank === true) && !st.gs.dead,
 
@@ -993,11 +1095,8 @@
       };
     },
 
-    story: function(st, api){
-      return storyLine(st);
-    },
+    story: function(st){ return storyLine(st); },
 
-    // Actions
     serve: function(st, api){ sellOnce(st, api); },
     discount: function(st, api){ chooseDiscountFlow(st, api); },
     advertise: function(st, api){ advertise(st, api); },
@@ -1012,10 +1111,7 @@
       ensureExtraButtons(st, api);
       updateButtonLabels(st, api);
 
-      // Update the discount button to match your original request wording
-      if(api.$("goodDeedBtn")) api.$("goodDeedBtn").textContent = "Offer discount…";
-
-      // Add a “status” line into the ASCII caption area (no ascii art required)
+      // Caption status line
       if(api.$("ascii_caption")){
         var incoming = (st.gs.shipments && st.gs.shipments.length) ? st.gs.shipments.length : 0;
         var eta = "";
@@ -1024,25 +1120,34 @@
           eta = " | Wagon ETA: day " + soon;
         }
 
+        var compTag = st.gs.competitorActive ? " | COMPETITOR: yes" : "";
+
         api.$("ascii_caption").textContent =
-          (st.gs.itemName ? ("Selling: " + st.gs.itemName) : "Pick an item to sell") +
+          "Town #" + (st.gs.townIndex||1) + " | " + (st.gs.season||"Spring") +
+          " | Selling: " + (st.gs.itemName || "none") +
           " | Price: " + (st.gs.sellPrice ? api.money(st.gs.sellPrice) : "unset") +
           " | Stock: " + (st.gs.stock || 0) +
           " | Cash: " + api.money(st.money) +
           " | Rep: " + st.reputation +
-          eta;
+          eta + compTag;
       }
     },
 
-    onLoad: function(st, api){
-      // save safety
+    onLoad: function(st){
       st.gs = st.gs || {};
       st.gs.shipments = st.gs.shipments || [];
       st.gs.totalSales = st.gs.totalSales || 0;
       st.gs.missedRent = st.gs.missedRent || 0;
+
       if(typeof st.gs.gazetteSupported !== "boolean") st.gs.gazetteSupported = !!st.gs.gazetteSupported;
       if(typeof st.gs.dead !== "boolean") st.gs.dead = false;
       if(typeof st.gs.lastPriceChangeDay !== "number") st.gs.lastPriceChangeDay = -999;
+
+      // new fields safety
+      if(!st.gs.season) st.gs.season = seasonName(st.dayCount || 0);
+      if(!st.gs.townIndex) st.gs.townIndex = 1;
+      if(typeof st.gs.competitorActive !== "boolean") st.gs.competitorActive = false;
+      if(typeof st.gs.competitorPressure !== "number") st.gs.competitorPressure = 0;
 
       st.unlocked = st.unlocked || {};
       if(typeof st.unlocked.stall !== "boolean") st.unlocked.stall = false;
