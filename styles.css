@@ -21,6 +21,14 @@ body {
   padding: 6px;
 }
 
+#notes_panel {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #ccc;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 /* =========================================================
    LAYOUT (Left / Right panels)
    ========================================================= */
